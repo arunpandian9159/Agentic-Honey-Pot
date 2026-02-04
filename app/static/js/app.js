@@ -115,7 +115,7 @@ async function sendMessage() {
   sendLoading.style.display = "block";
 
   // Add user message to UI
-  const sender = document.getElementById("senderType").value;
+  const sender = "scammer";
   addMessage(text, sender);
   input.value = "";
   autoResizeTextarea(input);
@@ -167,6 +167,11 @@ async function sendMessage() {
         text: data.reply,
         timestamp: Date.now(),
       });
+    }
+
+    // Update intelligence panel with extracted data
+    if (data.intelligence) {
+      updateIntelligence(data.intelligence);
     }
 
     // Refresh metrics after each message
