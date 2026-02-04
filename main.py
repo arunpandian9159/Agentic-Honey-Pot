@@ -54,6 +54,17 @@ async def lifespan(app: FastAPI):
         logger.info("✓ API_SECRET_KEY configured")
     
     logger.info(f"✓ Callback URL: {settings.GUVI_CALLBACK_URL}")
+    
+    # Initialize RAG system if configured
+    from app.core.rag_config import is_rag_enabled, initialize_collections
+    if is_rag_enabled():
+        if initialize_collections():
+            logger.info("✓ RAG system initialized")
+        else:
+            logger.warning("⚠️ RAG initialization failed, continuing without RAG")
+    else:
+        logger.info("ℹ️ RAG disabled (QDRANT_URL/QDRANT_API_KEY not set)")
+    
     logger.info("=" * 50)
     logger.info("🚀 AI Honeypot API Ready!")
     logger.info("Frontend is in http://localhost:8000/")

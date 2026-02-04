@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends
 from app.core.config import settings
 from app.core.session import SessionManager
 from app.core.llm import GroqClient
+from app.core.rag_config import is_rag_enabled, get_qdrant_client
 from app.agents.optimized import OptimizedAgent
 from app.agents.extractor import IntelligenceExtractor
 from app.utils.callbacks import GUVICallback
@@ -30,7 +31,20 @@ router = APIRouter()
 # Initialize components (singleton instances)
 session_manager = SessionManager()
 groq_client = GroqClient()
-optimized_agent = OptimizedAgent(groq_client)  # Single-call agent
+
+# Initialize agent - RAG-enhanced if available, else fallback to optimized
+_rag_agent = None
+if is_rag_enabled():
+    try:
+        from app.agents.rag_conversation_manager import RAGEnhancedConversationManager
+        qdrant_client = get_qdrant_client()
+        if qdrant_client:
+            _rag_agent = RAGEnhancedConversationManager(groq_client, qdrant_client)
+            logger.info("✓ Using RAG-enhanced agent")
+    except Exception as e:
+        logger.warning(f"RAG agent initialization failed: {e}")
+
+optimized_agent = _rag_agent or OptimizedAgent(groq_client)
 intelligence_extractor = IntelligenceExtractor(groq_client)  # For scoring only
 guvi_callback = GUVICallback()
 
@@ -149,6 +163,13 @@ async def chat_endpoint(
                 metrics["total_intelligence"] += sum(
                     len(v) for v in session["intelligence"].values()
                 )
+                
+                # Store conversation in RAG for learning
+                if _rag_agent and hasattr(_rag_agent, 'store_completed_conversation'):
+                    try:
+                        await _rag_agent.store_completed_conversation(session, intel_score)
+                    except Exception as rag_err:
+                        logger.debug(f"RAG storage failed: {rag_err}")
         
         return ChatResponse(status="success", reply=reply)
         
