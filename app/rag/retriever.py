@@ -42,7 +42,7 @@ class RAGRetriever:
             query_text = f"Scam: {scam_type}. Message: {scammer_message}"
             query_vector = self.embedder.embed_text(query_text)
             
-            if not query_vector:
+            if not query_vector or not persona:
                 return []
             
             # Build filter
@@ -59,12 +59,24 @@ class RAGRetriever:
                 ]
             )
             
-            results = self.client.search(
-                collection_name="conversations",
-                query_vector=query_vector,
-                query_filter=filter_conditions,
-                limit=limit
-            )
+            # Use query_points API (recommended modern API)
+            if hasattr(self.client, "query_points"):
+                results = self.client.query_points(
+                    collection_name="conversations",
+                    query=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                ).points
+            elif hasattr(self.client, "search"):
+                results = self.client.search(
+                    collection_name="conversations",
+                    query_vector=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                )
+            else:
+                logger.error(f"Qdrant client missing required methods. Available: {dir(self.client)}")
+                return []
             
             return [result.payload for result in results]
         
@@ -92,7 +104,7 @@ class RAGRetriever:
             query_text = f"Stage: {conversation_stage}. Scammer: {scammer_message}"
             query_vector = self.embedder.embed_text(query_text)
             
-            if not query_vector:
+            if not query_vector or not persona:
                 return []
             
             filter_conditions = Filter(
@@ -102,12 +114,24 @@ class RAGRetriever:
                 ]
             )
             
-            results = self.client.search(
-                collection_name="response_patterns",
-                query_vector=query_vector,
-                query_filter=filter_conditions,
-                limit=limit
-            )
+            # Use query_points API
+            if hasattr(self.client, "query_points"):
+                results = self.client.query_points(
+                    collection_name="response_patterns",
+                    query=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                ).points
+            elif hasattr(self.client, "search"):
+                results = self.client.search(
+                    collection_name="response_patterns",
+                    query_vector=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                )
+            else:
+                logger.error(f"Qdrant client missing required methods. Available: {dir(self.client)}")
+                return []
             
             return [result.payload for result in results]
         
@@ -135,7 +159,7 @@ class RAGRetriever:
             query_text = f"Extract {target_intel_type} from {scam_type} as {persona}"
             query_vector = self.embedder.embed_text(query_text)
             
-            if not query_vector:
+            if not query_vector or not target_intel_type:
                 return []
             
             filter_conditions = Filter(
@@ -145,12 +169,24 @@ class RAGRetriever:
                 ]
             )
             
-            results = self.client.search(
-                collection_name="extraction_tactics",
-                query_vector=query_vector,
-                query_filter=filter_conditions,
-                limit=limit
-            )
+            # Use query_points API
+            if hasattr(self.client, "query_points"):
+                results = self.client.query_points(
+                    collection_name="extraction_tactics",
+                    query=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                ).points
+            elif hasattr(self.client, "search"):
+                results = self.client.search(
+                    collection_name="extraction_tactics",
+                    query_vector=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                )
+            else:
+                logger.error(f"Qdrant client missing required methods. Available: {dir(self.client)}")
+                return []
             
             return [result.payload for result in results]
         
@@ -178,7 +214,7 @@ class RAGRetriever:
             query_text = f"Persona: {persona}. Context: {history_text}"
             query_vector = self.embedder.embed_text(query_text)
             
-            if not query_vector:
+            if not query_vector or not persona:
                 return []
             
             filter_conditions = Filter(
@@ -188,12 +224,24 @@ class RAGRetriever:
                 ]
             )
             
-            results = self.client.search(
-                collection_name="conversations",
-                query_vector=query_vector,
-                query_filter=filter_conditions,
-                limit=limit
-            )
+            # Use query_points API
+            if hasattr(self.client, "query_points"):
+                results = self.client.query_points(
+                    collection_name="conversations",
+                    query=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                ).points
+            elif hasattr(self.client, "search"):
+                results = self.client.search(
+                    collection_name="conversations",
+                    query_vector=query_vector,
+                    query_filter=filter_conditions,
+                    limit=limit
+                )
+            else:
+                logger.error(f"Qdrant client missing required methods. Available: {dir(self.client)}")
+                return []
             
             return [result.payload for result in results]
         

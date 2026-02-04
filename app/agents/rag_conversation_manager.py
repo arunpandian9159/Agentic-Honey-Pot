@@ -88,8 +88,8 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         if not self._retriever:
             return ""
         
-        persona_name = session.get("persona", "tech_naive_parent")
-        scam_type = session.get("scam_type", "unknown")
+        persona_name = session.get("persona") or "tech_naive_parent"
+        scam_type = session.get("scam_type") or "unknown"
         message_number = session.get("message_count", 0) + 1
         
         context_parts = []

@@ -36,7 +36,15 @@ def get_qdrant_client():
             api_key=QDRANT_API_KEY,
             timeout=30
         )
-        logger.info("✓ Connected to Qdrant Cloud")
+        
+        # Diagnostics
+        methods = dir(_qdrant_client)
+        has_search = "search" in methods
+        has_query_points = "query_points" in methods
+        logger.info(f"✓ Connected to Qdrant Cloud (search={has_search}, query_points={has_query_points})")
+        if not has_search and not has_query_points:
+            logger.warning(f"⚠️ Qdrant client missing required retrieval methods! Available: {methods}")
+            
         return _qdrant_client
     
     except Exception as e:
@@ -48,22 +56,35 @@ def get_qdrant_client():
 COLLECTIONS = {
     "conversations": {
         "vector_size": 384,  # MiniLM embedding size
-        "description": "Successful conversation examples"
+        "description": "Successful conversation examples",
+        "indexes": {
+            "persona": "keyword",
+            "intelligence_score": "float",
+            "persona_consistency": "float"
+        }
     },
     "response_patterns": {
         "vector_size": 384,
-        "description": "High-quality response templates"
+        "description": "High-quality response templates",
+        "indexes": {
+            "persona": "keyword",
+            "led_to_intelligence": "bool"
+        }
     },
     "extraction_tactics": {
         "vector_size": 384,
-        "description": "Successful intelligence extraction examples"
+        "description": "Successful intelligence extraction examples",
+        "indexes": {
+            "intelligence_type": "keyword",
+            "success_rate": "float"
+        }
     }
 }
 
 
 def initialize_collections() -> bool:
     """
-    Create collections if they don't exist.
+    Create collections and payload indexes if they don't exist.
     Returns True if successful, False otherwise.
     """
     client = get_qdrant_client()
@@ -71,12 +92,13 @@ def initialize_collections() -> bool:
         return False
     
     try:
-        from qdrant_client.models import Distance, VectorParams
+        from qdrant_client.models import Distance, VectorParams, PayloadSchemaType
         
         for name, config in COLLECTIONS.items():
+            # 1. Ensure collection exists
             try:
-                client.get_collection(name)
-                logger.info(f"✓ Collection '{name}' exists")
+                collection_info = client.get_collection(name)
+                logger.debug(f"✓ Collection '{name}' exists")
             except Exception:
                 client.create_collection(
                     collection_name=name,
@@ -86,6 +108,30 @@ def initialize_collections() -> bool:
                     )
                 )
                 logger.info(f"✓ Created collection '{name}'")
+                collection_info = client.get_collection(name)
+
+            # 2. Ensure payload indexes exist for filtered fields
+            existing_indexes = collection_info.payload_schema
+            for field_name, schema_type_str in config.get("indexes", {}).items():
+                if field_name not in existing_indexes:
+                    # Map string type to PayloadSchemaType enum
+                    schema_map = {
+                        "keyword": PayloadSchemaType.KEYWORD,
+                        "float": PayloadSchemaType.FLOAT,
+                        "bool": PayloadSchemaType.BOOL,
+                        "integer": PayloadSchemaType.INTEGER
+                    }
+                    schema_type = schema_map.get(schema_type_str, PayloadSchemaType.KEYWORD)
+                    
+                    try:
+                        client.create_payload_index(
+                            collection_name=name,
+                            field_name=field_name,
+                            field_schema=schema_type
+                        )
+                        logger.info(f"✓ Created {schema_type_str} index for '{name}.{field_name}'")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to create index for {name}.{field_name}: {e}")
         
         return True
     

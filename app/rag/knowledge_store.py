@@ -74,7 +74,9 @@ class KnowledgeStore:
             logger.debug(f"Stored response pattern: {pattern_id}")
         
         except Exception as e:
-            logger.error(f"Failed to store interaction: {e}")
+            logger.error(f"Failed to store interaction in 'response_patterns': {e}", exc_info=True)
+            if self.client:
+                logger.debug(f"Client methods available: {dir(self.client)}")
     
     async def store_completed_conversation(
         self,
@@ -153,7 +155,9 @@ class KnowledgeStore:
                 )
         
         except Exception as e:
-            logger.error(f"Failed to store conversation: {e}")
+            logger.error(f"Failed to store completed conversation in 'conversations': {e}", exc_info=True)
+            if self.client:
+                logger.debug(f"Client methods available: {dir(self.client)}")
     
     async def _store_extraction_tactics(
         self,
