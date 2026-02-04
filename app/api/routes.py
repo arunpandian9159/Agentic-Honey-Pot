@@ -201,13 +201,15 @@ async def chat_endpoint(
                     except Exception as rag_err:
                         logger.debug(f"RAG storage failed: {rag_err}")
         
-        return ChatResponse(status="success", reply=reply)
+        return ChatResponse(status="success", reply=reply, response=reply)
         
     except Exception as e:
         logger.error(f"Error: {str(e)}", exc_info=True)
+        error_reply = "I'm sorry, I didn't understand. Can you explain again?"
         return ChatResponse(
             status="success",
-            reply="I'm sorry, I didn't understand. Can you explain again?"
+            reply=error_reply,
+            response=error_reply
         )
 
 @router.get("/api/intelligence")

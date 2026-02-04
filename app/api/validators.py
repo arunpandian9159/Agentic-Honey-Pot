@@ -4,12 +4,14 @@ Pydantic models for API data validation.
 """
 
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
 class Message(BaseModel):
     """Single message in a conversation."""
+    model_config = ConfigDict(populate_by_name=True)
+    
     sender: str = Field(..., description="Message sender: 'scammer' or 'user'")
     text: str = Field(..., description="Message text content")
     timestamp: int = Field(..., description="Unix timestamp in milliseconds")
@@ -17,6 +19,8 @@ class Message(BaseModel):
 
 class Metadata(BaseModel):
     """Request metadata for context."""
+    model_config = ConfigDict(populate_by_name=True)
+    
     channel: Optional[str] = Field(default="SMS", description="Communication channel")
     language: Optional[str] = Field(default="English", description="Message language")
     locale: Optional[str] = Field(default="IN", description="Locale code")
@@ -24,10 +28,13 @@ class Metadata(BaseModel):
 
 class ChatRequest(BaseModel):
     """Request body for /api/chat endpoint."""
-    sessionId: str = Field(..., description="Unique session identifier")
+    model_config = ConfigDict(populate_by_name=True)
+    
+    sessionId: str = Field(..., alias="session_id", description="Unique session identifier")
     message: Message = Field(..., description="Current message")
     conversationHistory: List[Message] = Field(
         default=[], 
+        alias="conversation_history",
         description="Previous messages in conversation"
     )
     metadata: Optional[Metadata] = Field(
@@ -38,8 +45,11 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response body for /api/chat endpoint."""
+    model_config = ConfigDict(populate_by_name=True)
+    
     status: str = Field(..., description="Response status: 'success' or 'error'")
     reply: str = Field(..., description="Agent's reply message")
+    response: str = Field(..., description="Alias for reply for compatibility")
 
 
 class HealthResponse(BaseModel):
