@@ -12,6 +12,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -54,6 +56,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"✓ Callback URL: {settings.GUVI_CALLBACK_URL}")
     logger.info("=" * 50)
     logger.info("🚀 AI Honeypot API Ready!")
+    logger.info("Frontend is in http://localhost:8000/")
     
     yield
     
@@ -87,6 +90,15 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(router)
+ 
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+
+@app.get("/")
+async def serve_dashboard():
+    """Serve the interactive dashboard."""
+    return FileResponse("app/static/index.html")
 
 
 # Exception handlers

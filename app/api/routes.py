@@ -193,9 +193,9 @@ async def get_usage():
     return groq_client.get_usage_stats()
 
 
-@router.get("/")
-async def root():
-    """Root endpoint with API information."""
+@router.get("/info")
+async def info():
+    """Endpoint with API information."""
     usage = rate_limiter.get_current_usage()
     return {
         "name": "AI Honeypot API",
@@ -210,6 +210,7 @@ async def root():
             "chat": "POST /api/chat",
             "health": "GET /health",
             "metrics": "GET /metrics",
-            "usage": "GET /usage"
+            "usage": "GET /usage",
+            "info": "GET /info"
         }
     }

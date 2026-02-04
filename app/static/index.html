@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Honeypot API - Interactive Dashboard</title>
+    <meta
+      name="description"
+      content="AI-powered honeypot system for scam detection and intelligence extraction"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <div class="bg-pattern"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+      <header>
+        <div class="logo-container">
+          <div class="logo-icon">🍯</div>
+          <h1>AI Honeypot API</h1>
+        </div>
+        <p class="subtitle">
+          AI-powered scam detection and intelligence extraction
+        </p>
+      </header>
+
+      <!-- Status Cards -->
+      <div class="status-grid">
+        <div class="status-card" id="statusHealth">
+          <div class="status-label">API Status</div>
+          <div class="status-value" id="healthStatus">Checking...</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Active Sessions</div>
+          <div class="status-value" id="activeSessions">-</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Scams Detected</div>
+          <div class="status-value" id="scamsDetected">-</div>
+        </div>
+        <div class="status-card" id="rpmCard">
+          <div class="status-label">Rate Limit (RPM)</div>
+          <div class="status-value" id="rpmStatus">-/30</div>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="main-grid">
+        <!-- Chat Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">💬 Chat Simulation</div>
+            <div class="session-info">
+              <span class="session-id" id="sessionIdDisplay">-</span>
+              <button class="btn btn-sm btn-danger" onclick="resetSession()">
+                🔄 New Session
+              </button>
+            </div>
+          </div>
+          <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+              <div class="message system">
+                <div class="message-text">
+                  Start a new conversation. Enter a scam message to test the
+                  honeypot.
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-container">
+              <div class="input-row">
+                <input
+                  type="text"
+                  class="chat-input"
+                  id="messageInput"
+                  placeholder="Type a scammer's message..."
+                  onkeydown="if (event.key === 'Enter') sendMessage();"
+                />
+                <button
+                  class="btn btn-primary btn-icon"
+                  onclick="sendMessage()"
+                  id="sendBtn"
+                >
+                  <span id="sendIcon">➤</span>
+                  <div class="loading" id="sendLoading"></div>
+                </button>
+              </div>
+              <div class="quick-actions">
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('lottery')"
+                >
+                  🎰 Lottery Scam
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('bank')">
+                  🏦 Bank Fraud
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('job')">
+                  💼 Job Scam
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('kyc')">
+                  📋 KYC Scam
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config & Intelligence Panel -->
+        <div>
+          <!-- Configuration -->
+          <div class="panel" style="margin-bottom: 1.5rem">
+            <div class="panel-header">
+              <div class="panel-title">⚙️ Configuration</div>
+            </div>
+            <div class="panel-body">
+              <div class="config-section">
+                <label class="config-label">API Base URL</label>
+                <input
+                  type="text"
+                  class="config-input"
+                  id="apiUrl"
+                  value="http://localhost:8000"
+                  onchange="saveConfig()"
+                />
+              </div>
+              <div class="config-section">
+                <label class="config-label">API Secret Key</label>
+                <input
+                  type="password"
+                  class="config-input"
+                  id="apiKey"
+                  placeholder="Your API secret key"
+                  onchange="saveConfig()"
+                />
+              </div>
+              <div class="config-section">
+                <label class="config-label">Message Sender Type</label>
+                <select class="config-input config-select" id="senderType">
+                  <option value="scammer">Scammer (Testing Mode)</option>
+                  <option value="user">User (Normal Mode)</option>
+                </select>
+              </div>
+              <button
+                class="btn btn-success"
+                onclick="checkHealth()"
+                style="width: 100%; margin-top: 0.5rem"
+              >
+                🔍 Test Connection
+              </button>
+            </div>
+          </div>
+
+          <!-- Scam Detection Alert -->
+          <div
+            class="panel"
+            id="scamAlertPanel"
+            style="margin-bottom: 1.5rem; display: none"
+          >
+            <div class="panel-body">
+              <div class="scam-alert">
+                <div class="scam-alert-header">⚠️ SCAM DETECTED</div>
+                <div class="scam-details">
+                  <span
+                    ><strong>Type:</strong> <span id="scamType">-</span></span
+                  >
+                  <span
+                    ><strong>Confidence:</strong>
+                    <span id="scamConfidence">-</span>%</span
+                  >
+                  <span
+                    ><strong>Persona:</strong>
+                    <span id="scamPersona">-</span></span
+                  >
+                </div>
+                <div class="confidence-bar">
+                  <div
+                    class="confidence-fill"
+                    id="confidenceBar"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Intelligence Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">🔍 Extracted Intelligence</div>
+            </div>
+            <div class="panel-body" id="intelligencePanel">
+              <div class="intel-section">
+                <div class="intel-header">
+                  💳 Bank Accounts
+                  <span class="intel-badge" id="bankCount">0</span>
+                </div>
+                <div class="intel-items" id="bankAccounts">
+                  <span class="intel-empty">No data extracted yet</span>
+                </div>
+              </div>
+              <div class="intel-section">
+                <div class="intel-header">
+                  📱 UPI IDs
+                  <span class="intel-badge" id="upiCount">0</span>
+                </div>
+                <div class="intel-items" id="upiIds">
+                  <span class="intel-empty">No data extracted yet</span>
+                </div>
+              </div>
+              <div class="intel-section">
+                <div class="intel-header">
+                  📞 Phone Numbers
+                  <span class="intel-badge" id="phoneCount">0</span>
+                </div>
+                <div class="intel-items" id="phoneNumbers">
+                  <span class="intel-empty">No data extracted yet</span>
+                </div>
+              </div>
+              <div class="intel-section">
+                <div class="intel-header">
+                  🔗 Phishing Links
+                  <span class="intel-badge" id="linkCount">0</span>
+                </div>
+                <div class="intel-items" id="phishingLinks">
+                  <span class="intel-empty">No data extracted yet</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
