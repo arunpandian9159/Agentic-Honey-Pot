@@ -156,6 +156,9 @@ async function sendMessage() {
     }
 
     const data = await response.json();
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/f7ab89bb-346f-402a-9988-b325332ead5e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.js:chatResponse',message:'chat response keys and intelligence',data:{responseKeys:Object.keys(data),hasIntelligence:!!data.intelligence,intelKeys:data.intelligence?Object.keys(data.intelligence):[],bankCount:data.intelligence?.bank_accounts?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     // Hide typing indicator
     hideTypingIndicator();
@@ -169,9 +172,18 @@ async function sendMessage() {
       });
     }
 
-    // Update intelligence panel with extracted data
-    if (data.intelligence) {
-      updateIntelligence(data.intelligence);
+    // Fetch intelligence from separate endpoint (chat response is status+reply only per requirements)
+    try {
+      const intelRes = await fetch(
+        `${getApiUrl()}/api/intelligence?sessionId=${encodeURIComponent(sessionId)}`,
+        { headers: getApiKey() ? { "x-api-key": getApiKey() } : {} }
+      );
+      if (intelRes.ok) {
+        const intelData = await intelRes.json();
+        if (intelData.intelligence) updateIntelligence(intelData.intelligence);
+      }
+    } catch (e) {
+      console.log("Intelligence fetch failed:", e);
     }
 
     // Refresh metrics after each message

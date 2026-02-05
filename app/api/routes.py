@@ -5,11 +5,12 @@ Optimized to use single LLM call per message for rate limit compliance.
 Rate Limits: RPM-30, RPD-1K, TPM-12K, TPD-100K
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import Dict
 
-from fastapi import APIRouter, HTTPException, Header, Depends
+from fastapi import APIRouter, HTTPException, Header, Depends, Query
 
 from app.core.config import settings
 from app.core.session import SessionManager
@@ -158,6 +159,28 @@ async def chat_endpoint(
             status="success",
             reply="I'm sorry, I didn't understand. Can you explain again?"
         )
+
+
+@router.get("/api/intelligence")
+async def get_session_intelligence(
+    sessionId: str = Query(..., description="Session ID"),
+    api_key: str = Depends(verify_api_key),
+) -> Dict:
+    """
+    Get extracted intelligence for a session.
+    Frontend calls this after each chat to refresh the intelligence panel.
+    Chat response remains { status, reply } only per requirements.
+    """
+    session = session_manager.get_session(sessionId)
+    if not session:
+        return {"intelligence": {
+            "bank_accounts": [],
+            "upi_ids": [],
+            "phone_numbers": [],
+            "phishing_links": [],
+            "suspicious_keywords": [],
+        }}
+    return {"intelligence": session["intelligence"]}
 
 
 @router.get("/health", response_model=HealthResponse)
