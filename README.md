@@ -6,7 +6,8 @@ An AI-powered honeypot system that autonomously detects scam messages, engages s
 
 - **Scam Detection**: Uses LLM analysis with keyword-based fallback for reliable detection
 - **Adaptive Personas**: 5 victim personas that adapt based on scam type and urgency
-- **Intelligence Extraction**: Extracts bank accounts, UPI IDs, phone numbers, and phishing links
+- **Guided Intelligence Extraction**: Extract bank accounts, UPI IDs, and phishing links using strategic tactics
+- **Optimized Single-Call Agent**: Combined detection, extraction, and response in one LLM call for 3x performance
 - **Conversation Management**: 7-stage conversation flow for maximum engagement
 - **GUVI Callback**: Automatic reporting to evaluation endpoint
 
@@ -190,7 +191,11 @@ honeypot-api/
 │   │   ├── detector.py    # Scam detection
 │   │   ├── personas.py    # Victim personas
 │   │   ├── conversation.py # Conversation flow
-│   │   └── extractor.py   # Intel extraction
+│   │   ├── extractor.py   # Intel extraction
+│   │   ├── extraction_strategies.py # Guided extraction tactics
+│   │   ├── optimized.py   # Single-call optimized agent
+│   │   ├── response_variation.py # Humanization engine
+│   │   └── enhanced_personas.py # Detailed persona traits
 │   └── utils/
 │       ├── logger.py      # Logging
 │       └── callbacks.py   # GUVI callback

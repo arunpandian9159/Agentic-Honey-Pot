@@ -105,6 +105,20 @@ RESPONSE RULES:
 - Keep scammer engaged, extract their payment details"""
 ```
 
+### Response Normalization & Validation
+
+To ensure high-quality interactions, the agent validates every response before sending.
+
+```python
+def _is_valid_response(self, text: str) -> bool:
+    # Check for minimum length and known "fragment" patterns
+    if len(text) < 20 or text.lower() in ["i'm", "that", "can"]:
+        return False
+    return True
+```
+
+If a response is too short or looks like a fragment, the system automatically replaces it with a persona-appropriate fallback response.
+
 ### Fallback Strategy
 
 If LLM fails, we have pure regex fallback:
@@ -249,6 +263,23 @@ if result["confidence"] >= settings.SCAM_DETECTION_THRESHOLD:
 
 1. **LLM Extraction** - Pattern understanding
 2. **Regex Enhancement** - Never miss structured patterns
+3. **Guided Extraction Strategies** - Active pursuit of missing data
+
+### Guided Intelligence Extraction
+
+Implemented in `app/agents/extraction_strategies.py`, this system actively tries to fill gaps in the system's intelligence.
+
+| Strategy            | Tactics Used                                                                      | Success Rate |
+| :------------------ | :-------------------------------------------------------------------------------- | :----------- |
+| `need_upi`          | "I tried but it didn't work. Send UPI again?", "My app is slow. What was the ID?" | 82%          |
+| `need_bank_account` | "I need account number for my records", "Which bank should I transfer to?"        | 67%          |
+| `need_link`         | "The link didn't open. Can you send it again?", "It shows error."                 | 60%          |
+
+#### Key Logic:
+
+- **Gap Detection**: Scans session intelligence for missing UPI IDs, bank accounts, or phishing links.
+- **Cooldown Mechanism**: Ensures the same tactic isn't used too frequently (minimum 3 messages cooldown).
+- **Softening**: Tactfully adjusts questions based on conversation stage (early vs late).
 
 ### Pattern Definitions
 
@@ -432,38 +463,26 @@ def get_concise_context(session: Dict, msg_count: int) -> str:
 
 ### Variation Engine
 
+The `ResponseVariationEngine` in `app/agents/response_variation.py` transforms raw AI text into human-like responses.
+
+#### Humanization Techniques:
+
+- **AI Pattern Removal**: Strips phrases like "I understand", "Certainly", or "As an AI".
+- **Natural Imperfections**: Adds realistic typos (e.g., "moeny", "accoutn"), missing punctuation, and varied capitalization based on persona.
+- **Repetition Prevention**: Tracks message history to avoid using similar sentence structures or phrases.
+- **Complete Sentences**: Ensuring that shortened or varied responses always result in complete, natural-sounding sentences.
+- **Emotional Progression**: Adjusts punctuation and markers (e.g., "??", "!!") as the conversation gets more intense.
+
+#### Fallback Mechanism:
+
+If the LLM fails or produces a "fragment" response (too short or nonsensical), the system uses persona-specific fallback phrases:
+
 ```python
-# app/agents/response_variation.py
-
-class ResponseVariationEngine:
-    def humanize_response(
-        self,
-        base_response: str,
-        persona_name: str,
-        session_id: str,
-        message_number: int
-    ) -> str:
-        persona = ENHANCED_PERSONAS.get(persona_name)
-        if not persona:
-            return base_response
-
-        response = base_response
-
-        # Apply typo patterns
-        if random.random() < persona["typo_patterns"]["missing_punctuation"]:
-            response = self._remove_random_punctuation(response)
-
-        # Vary opening
-        if random.random() < 0.4:
-            opening = random.choice(persona["opening_styles"])
-            response = f"{opening} {response}".strip()
-
-        # Add quirks
-        if random.random() < 0.2:
-            quirk = random.choice(persona["quirks"])
-            response += f" {quirk}"
-
-        return response
+fallbacks = {
+    "elderly_confused": ["I'm confused. Can you explain again?", "What do you mean?"],
+    "busy_professional": ["wait what", "can u send that again"],
+    # ...
+}
 ```
 
 ---
