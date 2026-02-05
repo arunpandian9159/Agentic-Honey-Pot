@@ -22,7 +22,7 @@ from app.utils.rate_limiter import rate_limiter
 from app.api.validators import (
     ChatRequest, ChatResponse, HealthResponse, MetricsResponse
 )
-from app.utils.callbacks import GUVICallback
+from app.integrations.guvi_callback import GUVICallback
 
 logger = logging.getLogger(__name__)
 

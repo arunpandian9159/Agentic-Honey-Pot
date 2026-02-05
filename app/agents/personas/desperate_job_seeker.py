@@ -173,5 +173,25 @@ REMEMBER: Even if keeping it short, always complete the thought!"""
         }
         super().__init__("desperate_job_seeker", "Desperate Job Seeker", config)
 
+    @property
+    def age_range(self) -> str:
+        return self.config["base_traits"]["age"]
+    
+    @property
+    def tech_skill_level(self) -> str:
+        return self.config["base_traits"]["tech_skill"]
+    
+    @property
+    def trust_level(self) -> str:
+        return self.config["base_traits"]["trust_level"]
+
     def get_system_prompt(self, context: Optional[Dict[str, Any]] = None) -> str:
         return self.config["enhanced_system_prompt"]
+
+    def should_respond_to_scam_type(self, scam_type: str) -> bool:
+        # Job seekers are primarily vulnerable to job scams
+        vulnerable_scams = ["job_scam", "phishing", "upi_fraud"]
+        return scam_type in vulnerable_scams or scam_type == "other"
+
+    def generate_response_variation(self, base_response: str, context: Dict[str, Any]) -> str:
+        return base_response

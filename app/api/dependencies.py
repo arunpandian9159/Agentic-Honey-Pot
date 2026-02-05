@@ -7,7 +7,7 @@ from typing import Optional
 from app.core.config import settings
 from app.llm.client import GroqClient
 from app.agents.base_agent import AgentInterface
-from app.agents.conversation_manager import ConversationManager
+from app.orchestration.conversation_manager import ConversationManager
 from app.detection.detector import ScamDetector
 from app.intelligence.extractor import IntelligenceExtractor
 
