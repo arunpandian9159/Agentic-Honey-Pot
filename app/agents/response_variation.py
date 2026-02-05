@@ -229,38 +229,42 @@ class ResponseVariationEngine:
     MIN_CHARS = 25
 
     def _adjust_length(self, text: str, persona: Dict) -> str:
-        """Adjust response length based on persona distribution. Never truncate below MIN_WORDS/MIN_CHARS."""
+        """Adjust response length based on persona distribution. Ensure truncated outputs end with complete sentences."""
         length_dist = persona.get("message_length_distribution", {})
         words = text.split()
         word_count = len(words)
-        
-        # Determine target length category
         rand = random.random()
         cumulative = 0
         target_category = "medium"
-        
         for category, probability in length_dist.items():
             cumulative += probability
             if rand < cumulative:
                 target_category = category
                 break
-        
-        # Adjust if needed - never go below MIN_WORDS words or MIN_CHARS so we don't send "I'm" etc.
         if target_category == "very_short" and word_count > self.MIN_WORDS:
-            n = random.randint(self.MIN_WORDS, min(6, word_count))
-            out = " ".join(words[:n])
-            if len(out) >= self.MIN_CHARS:
-                return out
-            # else fall through and return full or medium
+            n = random.randint(max(3, self.MIN_WORDS), min(6, word_count))
+            shortened = " ".join(words[:n]).strip()
+            if shortened and shortened[-1] not in ".!?,":
+                lower = shortened.lower()
+                if any(q in lower for q in ["what", "why", "how", "can", "should", "when", "where", "who"]):
+                    shortened += "?"
+                else:
+                    shortened += "."
+            if len(shortened) >= self.MIN_CHARS:
+                return shortened
         elif target_category == "short" and word_count > 10:
-            n = random.randint(max(self.MIN_WORDS, 6), min(10, word_count))
-            return " ".join(words[:n])
-        
+            n = random.randint(max(self.MIN_WORDS, 5), min(9, word_count))
+            shortened = " ".join(words[:n]).strip()
+            if shortened and shortened[-1] not in ".!?":
+                if "?" in text or any(q in text.lower() for q in ["what", "why", "how", "can", "should"]):
+                    shortened += "?"
+                else:
+                    shortened += "."
+            return shortened
         if target_category == "long" and word_count < 15:
             fillers = persona.get("vocabulary", {}).get("filler_phrases", [])
             if fillers:
                 text += f" {random.choice(fillers)}"
-        
         return text
     
     def _add_emotional_markers(

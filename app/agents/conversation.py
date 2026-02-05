@@ -4,10 +4,10 @@ Manages conversation stages and generates contextual victim responses.
 """
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
 from enum import Enum
-
-from app.core.llm import GroqClient
+if TYPE_CHECKING:
+    from app.core.llm import GroqClient
 from app.agents.personas import PersonaManager
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ Example: "The link isn't working. Can you send another one? Or should I try a di
 """
     }
     
-    def __init__(self, llm_client: GroqClient):
+    def __init__(self, llm_client: "GroqClient"):
         self.llm = llm_client
         self.persona_manager = PersonaManager()
     
@@ -183,12 +183,12 @@ Generate ONLY the victim's reply. No explanations, no quotes around the response
         try:
             response = await self.llm.generate(
                 prompt=full_prompt,
-                temperature=0.7,  # Creative but consistent
-                max_tokens=100    # Keep responses short
+                temperature=0.7,
+                max_tokens=200
             )
             
-            # Clean response
             response = self._clean_response(response)
+            response = self._ensure_sentence_complete(response)
             
             # Validate response quality
             if not self._validate_response(response, persona):
@@ -247,11 +247,8 @@ Ask where you should send money or what link to click."""
     
     def _validate_response(self, response: str, persona: str) -> bool:
         """Validate response quality."""
-        # Check length
         if len(response) < 5 or len(response) > 300:
             return False
-        
-        # Check for AI language patterns
         ai_patterns = [
             "as an ai", "i'm an ai", "artificial intelligence",
             "language model", "i cannot", "i'm unable",
@@ -261,8 +258,45 @@ Ask where you should send money or what link to click."""
         response_lower = response.lower()
         if any(pattern in response_lower for pattern in ai_patterns):
             return False
-        
+        if len(response) > 20 and response[-1] not in ".!?":
+            return False
+        if not self._is_sentence_complete(response):
+            return False
         return True
+    
+    def _is_sentence_complete(self, text: str) -> bool:
+        t = text.strip()
+        if len(t.split()) <= 3:
+            return bool(t) and t[-1] in ".!?"
+        patterns = [
+            r"\s+(I|Can|What|Why|How|When|Where|Who|Will|Should|Could|Would|Please|My|Your|The)$",
+            r"\s+(is|are|was|were|be|been|has|have|had|do|does|did|will|would|should|could)$",
+            r"\s+to$",
+            r"\s+and$",
+            r"\s+or$",
+            r"\s+but$",
+        ]
+        for p in patterns:
+            import re
+            if re.search(p, t, re.IGNORECASE):
+                return False
+        return True
+    
+    def _ensure_sentence_complete(self, text: str) -> str:
+        t = text.strip()
+        if not t:
+            return t
+        if t[-1] in ".!?":
+            return t
+        if len(t.split()) <= 3:
+            lw = t.lower()
+            if lw in ["what", "why", "how", "when", "where", "who"]:
+                return t + "?"
+            return t + "."
+        qs = ["what", "why", "how", "when", "where", "who", "can you", "could you", "should i"]
+        if any(t.lower().startswith(q) for q in qs):
+            return t + "?"
+        return t + "."
     
     def _fallback_response(self, stage: ConversationStage, persona: str) -> str:
         """Generate fallback response if LLM fails."""

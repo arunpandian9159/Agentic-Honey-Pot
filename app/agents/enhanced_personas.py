@@ -169,7 +169,28 @@ Examples of UNNATURAL (avoid):
 "I see. That's rather worrying. What steps should I take?"
 "Oh my! This is very alarming. I appreciate your help."
 
-Generate ONLY the victim's reply. No explanations, no quotes, just the message text."""
+Generate ONLY the victim's reply. No explanations, no quotes, just the message text.
+
+CRITICAL RESPONSE RULES:
+1. ALWAYS complete your sentences - never end mid-thought
+2. ALWAYS end with proper punctuation (. ! ?)
+3. If confused, ask a complete question
+4. Keep responses 1-3 complete sentences (not fragments)
+5. Each response should make sense on its own
+
+EXAMPLES OF GOOD RESPONSES:
+"What do you mean?"
+"I don't understand this."
+"Can you explain that again?"
+"ok send me the details"
+
+EXAMPLES OF BAD RESPONSES (NEVER DO THIS):
+"What do you"
+"I don't"
+"Can you please"
+"ok send me"
+
+REMEMBER: Even if keeping it short, always complete the thought!"""
     },
     
     "busy_professional": {
@@ -313,7 +334,28 @@ Examples of UNNATURAL (avoid):
 "I understand. However, I'm currently quite busy. Could you provide the details?"
 "Thank you for the information. I'll review it carefully."
 
-Generate ONLY the victim's reply. Short and rushed."""
+Generate ONLY the victim's reply. Short and rushed.
+
+CRITICAL RESPONSE RULES:
+1. ALWAYS complete your sentences - never end mid-thought
+2. ALWAYS end with proper punctuation (. ! ?)
+3. If confused, ask a complete question
+4. Keep responses 1-3 complete sentences (not fragments)
+5. Each response should make sense on its own
+
+EXAMPLES OF GOOD RESPONSES:
+"What do you mean?"
+"I don't understand this."
+"Can you explain that again?"
+"ok send me the details"
+
+EXAMPLES OF BAD RESPONSES (NEVER DO THIS):
+"What do you"
+"I don't"
+"Can you please"
+"ok send me"
+
+REMEMBER: Even if keeping it short, always complete the thought!"""
     },
     
     "curious_student": {
@@ -466,7 +508,28 @@ Examples of UNNATURAL (avoid):
 "I'm somewhat skeptical about this offer. Could you provide more details?"
 "That's quite interesting! However, I have some concerns."
 
-Generate ONLY the victim's reply. Casual and slang-filled."""
+Generate ONLY the victim's reply. Casual and slang-filled.
+
+CRITICAL RESPONSE RULES:
+1. ALWAYS complete your sentences - never end mid-thought
+2. ALWAYS end with proper punctuation (. ! ?)
+3. If confused, ask a complete question
+4. Keep responses 1-3 complete sentences (not fragments)
+5. Each response should make sense on its own
+
+EXAMPLES OF GOOD RESPONSES:
+"What do you mean?"
+"I don't understand this."
+"Can you explain that again?"
+"ok send me the details"
+
+EXAMPLES OF BAD RESPONSES (NEVER DO THIS):
+"What do you"
+"I don't"
+"Can you please"
+"ok send me"
+
+REMEMBER: Even if keeping it short, always complete the thought!"""
     },
     
     "tech_naive_parent": {
@@ -611,7 +674,28 @@ Examples of UNNATURAL (avoid):
 "Okay bet, makes sense."
 "ngl this seems legit"
 
-Generate ONLY the victim's reply. Polite and safety-focused."""
+Generate ONLY the victim's reply. Polite and safety-focused.
+
+CRITICAL RESPONSE RULES:
+1. ALWAYS complete your sentences - never end mid-thought
+2. ALWAYS end with proper punctuation (. ! ?)
+3. If confused, ask a complete question
+4. Keep responses 1-3 complete sentences (not fragments)
+5. Each response should make sense on its own
+
+EXAMPLES OF GOOD RESPONSES:
+"What do you mean?"
+"I don't understand this."
+"Can you explain that again?"
+"ok send me the details"
+
+EXAMPLES OF BAD RESPONSES (NEVER DO THIS):
+"What do you"
+"I don't"
+"Can you please"
+"ok send me"
+
+REMEMBER: Even if keeping it short, always complete the thought!"""
     },
     
     "desperate_job_seeker": {
@@ -752,7 +836,28 @@ Examples of UNNATURAL (avoid):
 "Seems sus, why do I need to pay?"
 "ngl this sounds sketchy"
 
-Generate ONLY the victim's reply. Grateful and eager."""
+Generate ONLY the victim's reply. Grateful and eager.
+
+CRITICAL RESPONSE RULES:
+1. ALWAYS complete your sentences - never end mid-thought
+2. ALWAYS end with proper punctuation (. ! ?)
+3. If confused, ask a complete question
+4. Keep responses 1-3 complete sentences (not fragments)
+5. Each response should make sense on its own
+
+EXAMPLES OF GOOD RESPONSES:
+"What do you mean?"
+"I don't understand this."
+"Can you explain that again?"
+"ok send me the details"
+
+EXAMPLES OF BAD RESPONSES (NEVER DO THIS):
+"What do you"
+"I don't"
+"Can you please"
+"ok send me"
+
+REMEMBER: Even if keeping it short, always complete the thought!"""
     }
 }
 

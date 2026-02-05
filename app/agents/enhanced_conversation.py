@@ -7,9 +7,9 @@ import json
 import logging
 import random
 import re
-from typing import Dict, List, Optional
-
-from app.core.llm import GroqClient
+from typing import Dict, List, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.core.llm import GroqClient
 from app.agents.enhanced_personas import (
     ENHANCED_PERSONAS, 
     get_persona, 
@@ -37,13 +37,14 @@ class EnhancedConversationManager:
         "microsoft", "virus", "hacked", "job", "selected", "salary", "http"
     ]
     
-    def __init__(self, llm_client: GroqClient):
+    def __init__(self, llm_client: "GroqClient"):
         """Initialize with LLM client and all enhancement components."""
         self.llm = llm_client
         self.variation_engine = ResponseVariationEngine()
         self.flow_manager = NaturalConversationFlow()
         self.emotion_layer = EmotionalIntelligence()
         self.context_manager = ContextAwareManager()
+        self.conversation_memory = ConversationMemory()
     
     async def process_message(
         self,
@@ -84,37 +85,39 @@ class EnhancedConversationManager:
         )
         
         try:
-            # Generate response via LLM
-            response_text = await self.llm.generate_json(prompt=prompt, max_tokens=250)
+            response_text = await self.llm.generate_json(prompt=prompt, max_tokens=200)
             result = json.loads(response_text)
-            
-            # Normalize and validate
             result = self._normalize_result(result, persona_name)
-            
-            # Apply humanization to response
-            if result.get("response"):
-                result["response"] = self.variation_engine.humanize_response(
-                    base_response=result["response"],
+            raw_response = result.get("response", "").strip().strip('"').strip("'")
+            logger.info(f"Raw LLM output: '{raw_response}'")
+            if not self._validate_response_quality(raw_response, persona_name):
+                regen = await self._regenerate_response(persona_name, scammer_message, session, msg_count)
+                raw_response = regen.strip().strip('"').strip("'")
+            if not self._validate_response_quality(raw_response, persona_name):
+                raw_response = self._get_contextual_fallback(persona_name, scammer_message, msg_count)
+            raw_response = self._ensure_sentence_complete(raw_response)
+            humanized = self.variation_engine.humanize_response(
+                base_response=raw_response,
+                persona_name=persona_name,
+                session_id=session_id,
+                message_number=msg_count
+            ).strip()
+            if not self.variation_engine.validate_human_likeness(humanized, persona_name):
+                humanized = self.variation_engine.get_fallback_response(
                     persona_name=persona_name,
-                    session_id=session_id,
-                    message_number=msg_count
+                    conversation_stage=get_stage_guidance(msg_count)
                 )
-                
-                # Validate human-likeness
-                if not self.variation_engine.validate_human_likeness(result["response"], persona_name):
-                    logger.warning("Response failed human-likeness validation, regenerating")
-                    result["response"] = self.variation_engine.get_fallback_response(
-                        persona_name=persona_name,
-                        conversation_stage=get_stage_guidance(msg_count)
-                    )
-            
+            humanized = self._ensure_sentence_complete(humanized)
+            if self.conversation_memory.is_too_similar(session_id, humanized):
+                varied = await self._regenerate_with_variation(persona_name, scammer_message, session, msg_count)
+                humanized = self._ensure_sentence_complete(varied.strip())
+            self.conversation_memory.add_response(session_id, humanized)
+            result["response"] = humanized
             logger.info(
                 f"Enhanced result: scam={result['is_scam']}, "
                 f"type={result['scam_type']}, persona={persona_name}, msg#{msg_count}"
             )
-            
             return result
-            
         except Exception as e:
             logger.warning(f"Enhanced processing failed: {e}")
             return self._fallback_response(scammer_message, persona_name, msg_count)
@@ -288,3 +291,206 @@ RESPONSE RULES:
         self.emotion_layer.clear_session(session_id)
         if session_id in self.variation_engine.message_count:
             del self.variation_engine.message_count[session_id]
+
+    def _validate_response_quality(self, response: str, persona: str) -> bool:
+        """Comprehensive response validation."""
+        if len(response) < 3:
+            return False
+        if len(response) > 300:
+            return False
+        if not self._is_sentence_complete(response):
+            return False
+        ai_patterns = [
+            "i understand",
+            "i see",
+            "i apologize",
+            "i'm an ai",
+            "as an ai",
+            "i cannot",
+            "however,"
+        ]
+        lower = response.lower()
+        if any(p in lower for p in ai_patterns):
+            return False
+        words = response.split()
+        if len(words) != len(set(words)) and len(words) < 15:
+            counts = {}
+            for w in words:
+                wl = w.lower()
+                counts[wl] = counts.get(wl, 0) + 1
+            if any(c >= 3 for c in counts.values()):
+                return False
+        return True
+
+    def _is_sentence_complete(self, text: str) -> bool:
+        """Check for obvious incomplete endings."""
+        t = text.strip()
+        if len(t.split()) <= 3:
+            return bool(t) and t[-1] in ".!?"
+        patterns = [
+            r"\s+(I|Can|What|Why|How|When|Where|Who|Will|Should|Could|Would|Please|My|Your|The)$",
+            r"\s+(is|are|was|were|be|been|has|have|had|do|does|did|will|would|should|could)$",
+            r"\s+to$",
+            r"\s+and$",
+            r"\s+or$",
+            r"\s+but$",
+        ]
+        for p in patterns:
+            if re.search(p, t, re.IGNORECASE):
+                return False
+        return True
+
+    def _ensure_sentence_complete(self, text: str) -> str:
+        """Ensure ending punctuation and complete thought."""
+        t = text.strip()
+        if not t:
+            return t
+        if t[-1] in ".!?":
+            return t
+        if len(t.split()) <= 3:
+            lw = t.lower()
+            if lw in ["what", "why", "how", "when", "where", "who"]:
+                return t + "?"
+            return t + "."
+        qs = ["what", "why", "how", "when", "where", "who", "can you", "could you", "should i"]
+        if any(t.lower().startswith(q) for q in qs):
+            return t + "?"
+        return t + "."
+
+    async def _regenerate_response(self, persona: str, scammer_message: str, session: Dict, msg_count: int) -> str:
+        """Regenerate with stricter completion instruction."""
+        prompt = self._build_enhanced_prompt(
+            scammer_message=scammer_message,
+            session=session,
+            persona=get_persona(persona),
+            message_number=msg_count
+        ) + "\nEnsure the reply is a complete sentence ending with . ! or ?"
+        try:
+            txt = await self.llm.generate(
+                prompt=prompt,
+                temperature=0.5,
+                max_tokens=200
+            )
+            return txt.strip()
+        except Exception:
+            return self._get_contextual_fallback(persona, scammer_message, msg_count)
+
+    async def _regenerate_with_variation(self, persona: str, scammer_message: str, session: Dict, msg_count: int) -> str:
+        """Regenerate emphasizing variation."""
+        prompt = self._build_enhanced_prompt(
+            scammer_message=scammer_message,
+            session=session,
+            persona=get_persona(persona),
+            message_number=msg_count
+        ) + "\nVary wording from previous messages. End with proper punctuation."
+        try:
+            txt = await self.llm.generate(
+                prompt=prompt,
+                temperature=0.6,
+                max_tokens=200
+            )
+            return txt.strip()
+        except Exception:
+            return self._get_contextual_fallback(persona, scammer_message, msg_count)
+
+    def _get_contextual_fallback(self, persona: str, scammer_message: str, message_number: int) -> str:
+        """Contextual fallback based on scammer intent."""
+        s = scammer_message.lower()
+        if any(w in s for w in ["otp", "password", "pin", "cvv"]):
+            options = {
+                "elderly_confused": [
+                    "I'm not sure what that is. Can you explain?",
+                    "My daughter usually helps me with these things.",
+                    "What do you mean by that?",
+                ],
+                "busy_professional": [
+                    "wait what",
+                    "which otp r u talking about",
+                    "didnt get any otp",
+                ],
+                "curious_student": [
+                    "what otp? i didnt get anything",
+                    "idk what ur talking about",
+                    "wait which one",
+                ],
+            }
+        elif any(w in s for w in ["account", "number", "details"]):
+            options = {
+                "elderly_confused": [
+                    "Which account number do you need?",
+                    "I have my passbook here, what should I tell you?",
+                    "Can you tell me why you need this?",
+                ],
+                "busy_professional": [
+                    "which account",
+                    "y do u need that",
+                    "send me ur details first",
+                ],
+                "curious_student": [
+                    "wait which account",
+                    "idk if i should share that tbh",
+                    "seems kinda sus ngl",
+                ],
+            }
+        elif any(w in s for w in ["send", "pay", "transfer", "upi"]):
+            options = {
+                "elderly_confused": [
+                    "Where should I send it? What's your account?",
+                    "I don't know how to do that. Can you help?",
+                    "What details do I need to send money?",
+                ],
+                "busy_professional": [
+                    "send where",
+                    "whats the upi id again",
+                    "give me the details",
+                ],
+                "curious_student": [
+                    "wait send where exactly",
+                    "whats ur upi id",
+                    "ok but where do i send it",
+                ],
+            }
+        else:
+            options = {
+                "elderly_confused": [
+                    "I'm confused. Can you explain again?",
+                    "What do you mean?",
+                    "I don't understand.",
+                ],
+                "busy_professional": [
+                    "what",
+                    "didnt get that",
+                    "explain pls",
+                ],
+                "curious_student": [
+                    "wait what",
+                    "confused",
+                    "what r u saying",
+                ],
+            }
+        choices = options.get(persona, options["elderly_confused"])
+        return random.choice(choices)
+
+class ConversationMemory:
+    """Track recent responses to avoid repetition."""
+    def __init__(self):
+        self.recent_responses = {}
+    def is_too_similar(self, session_id: str, new_response: str) -> bool:
+        if session_id not in self.recent_responses:
+            self.recent_responses[session_id] = []
+        recent = self.recent_responses[session_id]
+        for old in recent[-3:]:
+            s1 = set(old.lower().split())
+            s2 = set(new_response.lower().split())
+            if s1 and s2:
+                inter = s1.intersection(s2)
+                union = s1.union(s2)
+                if len(inter) / len(union) > 0.7:
+                    return True
+        return False
+    def add_response(self, session_id: str, response: str):
+        if session_id not in self.recent_responses:
+            self.recent_responses[session_id] = []
+        self.recent_responses[session_id].append(response)
+        if len(self.recent_responses[session_id]) > 5:
+            self.recent_responses[session_id].pop(0)
