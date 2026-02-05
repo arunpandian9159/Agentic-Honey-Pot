@@ -12,6 +12,8 @@ from app.agents.personas.base_persona import BasePersona
 from app.agents.personas.manager import PersonaManager
 from app.agents.humanization.variation_engine import VariationEngine
 from app.agents.humanization.emotional_intelligence import EmotionalIntelligence
+from app.agents.humanization.context_aware import ContextAwareManager
+from app.agents.humanization.natural_flow import NaturalConversationFlow
 from app.detection.detector import ScamDetector
 from app.detection.models.detection_result import DetectionResult
 from app.intelligence.extractor import IntelligenceExtractor
@@ -27,13 +29,19 @@ class ConversationManager(AgentInterface):
     
     def __init__(
         self,
+        llm_client: Any,
         detection_service: ScamDetector,
         intelligence_service: IntelligenceExtractor,
         persona_manager: Optional[PersonaManager] = None
     ):
+        self.llm = llm_client
         self.detection_service = detection_service
         self.intelligence_service = intelligence_service
         self.persona_manager = persona_manager or PersonaManager()
+        self.variation_engine = VariationEngine()
+        self.emotional_intelligence = EmotionalIntelligence()
+        self.natural_flow = NaturalConversationFlow()
+        self.context_manager = ContextAwareManager()
         self._conversation_contexts: Dict[str, Dict[str, Any]] = {}
     
     @property
@@ -68,19 +76,34 @@ class ConversationManager(AgentInterface):
             # Step 2: Extract intelligence
             intelligence_dict = await self.intelligence_service.extract(message)
             
-            # Step 3: Select appropriate persona
-            # Use current detection result for selection
-            scam_type = detection_result.scam_type.value if detection_result.scam_type else "other"
-            persona_name = self.persona_manager.select_persona(scam_type)
+            # Step 4: Generate Guidance
+            msg_count = len(session.get("conversation_history", []))
+            emotional_guidance = self.emotional_intelligence.get_emotional_guidance(
+                session_id, message, msg_count, self.persona_manager._personas[persona_name].config
+            )
+            stage_guidance = self.natural_flow.get_guidance(session)
+            concise_context = self.context_manager.get_context(session)
             
-            # Step 4: Generate response (simplified for orchestration)
-            # In a real scenario, this would call specialized generators
-            response_prompt = self.persona_manager.get_persona_prompt(persona_name)
-            # Response generation happens in routes or specialized agents
-            response = f"[Response as {persona_name}]" 
+            # Step 5: Build Persona Prompt
+            system_prompt = self.persona_manager.get_persona_prompt(persona_name)
+            full_system_prompt = f"{system_prompt}\n\nCURRENT CONTEXT: {concise_context}\n\nSTAGE GUIDANCE: {stage_guidance}\n\n{emotional_guidance}"
+            
+            # Step 6: Generate Base Response
+            base_response = await self.llm.generate(
+                prompt=f"Scammer message: {message}\n\nVictim's reply:",
+                system_prompt=full_system_prompt
+            )
+            
+            # Step 7: Humanize Response
+            final_response = self.variation_engine.humanize(
+                base_response=base_response,
+                persona=self.persona_manager._personas[persona_name].config,
+                session_id=session_id,
+                message_number=msg_count
+            )
             
             return {
-                "response": response,
+                "response": final_response,
                 "detection_result": detection_result,
                 "intelligence": intelligence_dict,
                 "persona_used": persona_name,

@@ -53,6 +53,7 @@ class DependencyContainer:
         """Get conversation manager instance (singleton)."""
         if self._conversation_manager is None:
             self._conversation_manager = ConversationManager(
+                llm_client=self.llm_client,
                 detection_service=self.detection_service,
                 intelligence_service=self.intelligence_service
             )

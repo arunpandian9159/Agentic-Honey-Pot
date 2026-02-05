@@ -32,8 +32,9 @@ class GroqClient:
     async def generate(
         self,
         prompt: str,
+        system_prompt: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: int = 150,  # Reduced from 500 to save tokens
+        max_tokens: int = 150,
         response_format: Optional[str] = None
     ) -> str:
         """
@@ -41,8 +42,9 @@ class GroqClient:
         
         Args:
             prompt: The prompt to send to the LLM
+            system_prompt: Optional system prompt to guide the LLM
             temperature: Sampling temperature (0.0-1.0)
-            max_tokens: Maximum tokens in response (reduced to 150 for efficiency)
+            max_tokens: Maximum tokens in response
             response_format: Optional format ("json" for JSON mode)
         
         Returns:
@@ -50,7 +52,8 @@ class GroqClient:
         """
         try:
             # Estimate tokens (rough: 1 token ≈ 4 chars)
-            estimated_tokens = len(prompt) // 4 + max_tokens
+            full_text = prompt + (system_prompt or "")
+            estimated_tokens = len(full_text) // 4 + max_tokens
             
             # Wait if rate limits would be exceeded
             wait_time = await rate_limiter.wait_if_needed(estimated_tokens)
@@ -60,9 +63,14 @@ class GroqClient:
             self.request_count += 1
             
             # Prepare request parameters
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
             params = {
                 "model": self.model,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens
             }
@@ -100,8 +108,9 @@ class GroqClient:
     async def generate_json(
         self,
         prompt: str,
+        system_prompt: Optional[str] = None,
         temperature: float = 0.1,
-        max_tokens: int = 200  # Reduced for JSON responses
+        max_tokens: int = 512
     ) -> str:
         """
         Generate a JSON response specifically.
@@ -109,14 +118,16 @@ class GroqClient:
         
         Args:
             prompt: The prompt expecting JSON output
+            system_prompt: Optional system prompt to guide the LLM
             temperature: Sampling temperature (default 0.1 for consistency)
-            max_tokens: Maximum tokens (reduced to 200 for JSON)
+            max_tokens: Maximum tokens
         
         Returns:
             JSON string response
         """
         return await self.generate(
             prompt=prompt,
+            system_prompt=system_prompt,
             temperature=temperature,
             max_tokens=max_tokens,
             response_format="json"

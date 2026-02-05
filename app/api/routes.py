@@ -157,9 +157,22 @@ async def chat_endpoint(
             confidence = 0.0
             scam_type = "other"
         else:
-            is_scam = detection_result.get("is_scam", False)
-            confidence = detection_result.get("confidence", 0.0)
-            scam_type = detection_result.get("scam_type", "other")
+            # Handle both dictionary and object (DetectionResult) types
+            if hasattr(detection_result, "to_dict"):
+                is_scam = detection_result.is_scam
+                confidence = detection_result.confidence
+                scam_type = detection_result.scam_type.value if hasattr(detection_result.scam_type, "value") else detection_result.scam_type
+            elif isinstance(detection_result, dict):
+                is_scam = detection_result.get("is_scam", False)
+                confidence = detection_result.get("confidence", 0.0)
+                scam_type = detection_result.get("scam_type", "other")
+            else:
+                # Basic attribute access fallback
+                is_scam = getattr(detection_result, "is_scam", False)
+                confidence = getattr(detection_result, "confidence", 0.0)
+                scam_type = getattr(detection_result, "scam_type", "other")
+                if hasattr(scam_type, "value"):
+                    scam_type = scam_type.value
         
         # 5. Update session with results
         if is_scam and confidence >= settings.SCAM_DETECTION_THRESHOLD:
