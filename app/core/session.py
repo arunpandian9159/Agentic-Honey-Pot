@@ -35,6 +35,10 @@ class SessionManager:
                 "phone_numbers": [],
                 "suspicious_keywords": []
             },
+            "strategy_state": {
+                "tactic_history": [],
+                "last_tactic": None
+            },
             "message_count": 0,
             "callback_sent": False,
             "created_at": datetime.now(),

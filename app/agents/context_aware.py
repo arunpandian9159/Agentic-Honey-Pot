@@ -6,6 +6,8 @@ Provides rich contextual layers for natural conversation adaptations.
 import random
 import datetime
 from typing import Dict, List
+from app.core.config import settings
+from app.agents.extraction_strategies import get_guided_tactic
 
 
 class ContextAwareManager:
@@ -217,18 +219,29 @@ Build that trust gradually. Don't rush the intelligence extraction."""
 
 
 def get_concise_context(session: Dict, message_number: int) -> str:
-    """Get a concise context summary for token-limited prompts."""
     intel = session.get("intelligence", {})
     has_intel = any(len(v) > 0 for v in intel.values())
-    
     if message_number <= 3:
-        return "STAGE: Initial - show confusion/concern, don't ask for details yet"
+        base = "STAGE: Initial - show confusion/concern, don't ask for details yet"
     elif message_number <= 6:
-        return "STAGE: Understanding - ask clarifying questions, start probing for their details"
+        base = "STAGE: Understanding - ask clarifying questions, start probing for their details"
     elif message_number <= 10:
         if has_intel:
-            return "STAGE: Complying - confirm their details, ask for clarification"
+            base = "STAGE: Complying - confirm their details, ask for clarification"
         else:
-            return "STAGE: Extracting - directly ask for their payment details/links"
+            base = "STAGE: Extracting - directly ask for their payment details/links"
     else:
-        return "STAGE: Prolonging - report issues, ask for alternative methods"
+        base = "STAGE: Prolonging - report issues, ask for alternative methods"
+    if settings.EXTRACTION_ENABLED:
+        guided_text, tactic_id = get_guided_tactic(session, message_number, session.get("persona"))
+        if guided_text:
+            strategy_state = session.get("strategy_state") or {}
+            strategy_state["last_tactic"] = {
+                "tactic_id": tactic_id,
+                "text": guided_text,
+                "msg": message_number,
+                "scam_type": session.get("scam_type")
+            }
+            session["strategy_state"] = strategy_state
+            return f"{base} | GUIDED: {guided_text}"
+    return base

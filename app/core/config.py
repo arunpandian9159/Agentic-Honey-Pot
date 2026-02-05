@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+    EXTRACTION_ENABLED: bool = os.getenv("EXTRACTION_ENABLED", "true").lower() == "true"
+    EARLY_STAGE_LIMIT: int = int(os.getenv("EARLY_STAGE_LIMIT", "3"))
+    MID_STAGE_LIMIT: int = int(os.getenv("MID_STAGE_LIMIT", "6"))
+    TACTIC_COOLDOWN_MESSAGES: int = int(os.getenv("TACTIC_COOLDOWN_MESSAGES", "3"))
     
     # Session settings
     SESSION_TIMEOUT_MINUTES: int = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))

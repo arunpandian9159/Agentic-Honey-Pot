@@ -105,12 +105,31 @@ async def chat_endpoint(
                 metrics["scams_detected"] += 1
                 logger.info(f"Scam detected! Type: {result['scam_type']}")
             
-            # Merge intelligence
             intel = result.get("intel", {})
+            got_new = False
             for key in ["bank_accounts", "upi_ids", "phone_numbers", "phishing_links", "suspicious_keywords"]:
                 existing = session["intelligence"].get(key, [])
+                before_len = len(existing)
                 new_items = intel.get(key, [])
-                session["intelligence"][key] = list(set(existing + new_items))
+                merged = list(set(existing + new_items))
+                session["intelligence"][key] = merged
+                if len(merged) > before_len:
+                    got_new = True
+            strategy_state = session.get("strategy_state") or {}
+            last_tactic = strategy_state.get("last_tactic")
+            if last_tactic:
+                entry = {
+                    "tactic_id": last_tactic.get("tactic_id"),
+                    "text": last_tactic.get("text"),
+                    "msg": last_tactic.get("msg"),
+                    "scam_type": session.get("scam_type"),
+                    "outcome": "success" if got_new else "neutral"
+                }
+                history = strategy_state.get("tactic_history") or []
+                history.append(entry)
+                strategy_state["tactic_history"] = history
+                strategy_state["last_tactic"] = None
+                session["strategy_state"] = strategy_state
         
         reply = result.get("response", "I don't understand. Can you explain?")
         
