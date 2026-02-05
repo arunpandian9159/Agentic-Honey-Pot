@@ -224,8 +224,12 @@ class ResponseVariationEngine:
         
         return text
     
+    # Minimum words/chars so we never return fragment replies like "I'm" or "that"
+    MIN_WORDS = 5
+    MIN_CHARS = 25
+
     def _adjust_length(self, text: str, persona: Dict) -> str:
-        """Adjust response length based on persona distribution."""
+        """Adjust response length based on persona distribution. Never truncate below MIN_WORDS/MIN_CHARS."""
         length_dist = persona.get("message_length_distribution", {})
         words = text.split()
         word_count = len(words)
@@ -241,14 +245,18 @@ class ResponseVariationEngine:
                 target_category = category
                 break
         
-        # Adjust if needed
-        if target_category == "very_short" and word_count > 5:
-            return " ".join(words[:random.randint(1, 4)])
-        
+        # Adjust if needed - never go below MIN_WORDS words or MIN_CHARS so we don't send "I'm" etc.
+        if target_category == "very_short" and word_count > self.MIN_WORDS:
+            n = random.randint(self.MIN_WORDS, min(6, word_count))
+            out = " ".join(words[:n])
+            if len(out) >= self.MIN_CHARS:
+                return out
+            # else fall through and return full or medium
         elif target_category == "short" and word_count > 10:
-            return " ".join(words[:random.randint(5, 9)])
+            n = random.randint(max(self.MIN_WORDS, 6), min(10, word_count))
+            return " ".join(words[:n])
         
-        elif target_category == "long" and word_count < 15:
+        if target_category == "long" and word_count < 15:
             fillers = persona.get("vocabulary", {}).get("filler_phrases", [])
             if fillers:
                 text += f" {random.choice(fillers)}"

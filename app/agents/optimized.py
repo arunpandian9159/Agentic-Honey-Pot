@@ -105,8 +105,8 @@ RESPONSE RULES:
             response = await self.llm.generate_json(prompt=prompt, max_tokens=250)
             result = json.loads(response)
             
-            # Validate and normalize
-            result = self._normalize_result(result, persona_name)
+            # Validate and normalize (includes fragment/short reply check)
+            result = self._normalize_result(result, persona_name, msg_count)
             
             # Apply humanization if using enhanced persona
             if persona_name in ENHANCED_PERSONAS and result.get("response"):
@@ -116,6 +116,12 @@ RESPONSE RULES:
                     session_id=session_id,
                     message_number=msg_count
                 )
+                # Re-validate after humanization (it can truncate); replace fragment with fallback
+                if not self._is_valid_response(result["response"]):
+                    result["response"] = self.variation_engine.get_fallback_response(
+                        persona_name=persona_name,
+                        conversation_stage=get_stage_guidance(msg_count)
+                    )
             
             logger.info(
                 f"Combined result: scam={result['is_scam']}, "
@@ -184,14 +190,49 @@ RESPONSE RULES:
         else:
             return "Report issues with their link, prolong"
     
-    def _normalize_result(self, result: Dict, persona: str) -> Dict:
-        """Normalize and validate result."""
+    # Minimum length and known fragments that indicate truncated/incomplete reply
+    MIN_RESPONSE_LEN = 20
+    FRAGMENT_PATTERNS = (
+        "i'm", "i am", "that", "can", "hello", "ok", "okay", "yes", "no",
+        "wait", "what", "why", "how", "when", "sorry", "please", "thanks",
+        "i'm not", "i'm confused", "i'm not sure", "hello i'm", "i'm not sure i",
+    )
+
+    def _is_valid_response(self, text: str) -> bool:
+        """Return False if response looks truncated or fragment-only (e.g. 'I'm', 'that')."""
+        if not text or not isinstance(text, str):
+            return False
+        t = text.strip()
+        if len(t) < self.MIN_RESPONSE_LEN:
+            return False
+        words = t.split()
+        if len(words) <= 2:
+            return False
+        t_lower = t.lower()
+        # Exact match to known fragment
+        if t_lower in ("i'm", "i am", "that", "can", "hello", "ok", "okay", "yes", "no", "wait", "what", "why", "how"):
+            return False
+        for frag in self.FRAGMENT_PATTERNS:
+            if t_lower == frag:
+                return False
+        return True
+
+    def _normalize_result(self, result: Dict, persona: str, msg_count: int = 0) -> Dict:
+        """Normalize and validate result. Replace fragment/short responses with fallback."""
         # Ensure all fields exist
         result.setdefault("is_scam", True)
         result.setdefault("confidence", 0.7)
         result.setdefault("scam_type", "other")
         result.setdefault("intel", {})
         result.setdefault("response", "I don't understand. Can you explain?")
+        
+        # Replace truncated or fragment-like response with fallback
+        if not self._is_valid_response(result["response"]):
+            result["response"] = self.variation_engine.get_fallback_response(
+                persona_name=persona,
+                conversation_stage=get_stage_guidance(msg_count)
+            )
+            logger.info("Replaced fragment/short response with fallback")
         
         # Normalize intel structure
         intel = result["intel"]

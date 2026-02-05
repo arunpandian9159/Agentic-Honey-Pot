@@ -5,7 +5,9 @@ Optimized to use single LLM call per message for rate limit compliance.
 Rate Limits: RPM-30, RPD-1K, TPM-12K, TPD-100K
 """
 
+import asyncio
 import logging
+import random
 from datetime import datetime
 from typing import Dict
 
@@ -111,6 +113,13 @@ async def chat_endpoint(
                 session["intelligence"][key] = list(set(existing + new_items))
         
         reply = result.get("response", "I don't understand. Can you explain?")
+        
+        # 4b. Human-like typing delay (so reply doesn't appear instantly)
+        # ~60–100 ms per character, min 2s, max 12s, with small random variance
+        base_sec = len(reply) * 0.08
+        delay_sec = min(max(base_sec, 2.0), 12.0) + random.uniform(-0.3, 0.5)
+        delay_sec = max(1.5, delay_sec)
+        await asyncio.sleep(delay_sec)
         
         # 5. Update session with our response
         session["conversation_history"].append({
