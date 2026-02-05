@@ -160,18 +160,15 @@ Example responses:
         Returns:
             Selected persona name
         """
-        # Find personas that match this scam type
         matching_personas = [
             name for name, persona in self.PERSONAS.items()
             if scam_type in persona["scam_types"]
         ]
         
         if not matching_personas:
-            # Default to general personas
             matching_personas = ["tech_naive_parent", "busy_professional"]
             logger.info(f"No matching personas for {scam_type}, using defaults")
         
-        # Higher urgency → more vulnerable personas (elderly, tech-naive)
         if urgency in ["critical", "high"]:
             if "elderly_confused" in matching_personas:
                 selected = "elderly_confused"
@@ -180,37 +177,18 @@ Example responses:
             else:
                 selected = random.choice(matching_personas)
         else:
-            # Random selection for lower urgency
             selected = random.choice(matching_personas)
         
         logger.info(f"Selected persona '{selected}' for scam_type={scam_type}, urgency={urgency}")
         return selected
     
     def get_persona_prompt(self, persona_name: str) -> str:
-        """
-        Get the system prompt for a persona.
-        
-        Args:
-            persona_name: Name of the persona
-        
-        Returns:
-            System prompt string
-        """
         persona = self.PERSONAS.get(persona_name, self.PERSONAS["tech_naive_parent"])
         return persona["system_prompt"]
     
     def get_persona_details(self, persona_name: str) -> Optional[Dict]:
-        """
-        Get full details for a persona.
-        
-        Args:
-            persona_name: Name of the persona
-        
-        Returns:
-            Persona dictionary or None
-        """
         return self.PERSONAS.get(persona_name)
     
     def list_personas(self) -> List[str]:
-        """Get list of all available persona names."""
         return list(self.PERSONAS.keys())
+

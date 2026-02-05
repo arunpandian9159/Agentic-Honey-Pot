@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import json
 
 from app.agents.detector import ScamDetector
-from tests.mock_data import SYNTHETIC_SCAM_MESSAGES, LEGITIMATE_MESSAGES
+from tests.fixtures.mock_data import SYNTHETIC_SCAM_MESSAGES, LEGITIMATE_MESSAGES
 
 
 class TestScamDetectorFallback:
@@ -25,7 +25,6 @@ class TestScamDetectorFallback:
         
         assert result["is_scam"] is True
         assert result["confidence"] > 0.5
-        # Should detect multiple keywords like "urgent", "suspended", "verify immediately"
         assert len(result["key_indicators"]) >= 2
     
     def test_fallback_detects_upi_keywords(self):
@@ -86,7 +85,6 @@ class TestScamDetectorLLM:
         detector = ScamDetector(mock_llm)
         result = await detector.analyze("Your account is blocked. Verify now.")
         
-        # Should fall back to keyword detection
         assert "is_scam" in result
         assert "confidence" in result
 
@@ -110,7 +108,6 @@ class TestScamDetectorOnMockData:
                 detected += 1
         
         detection_rate = detected / len(messages) if messages else 0
-        # Fallback detection rate can be lower - LLM is primary detector
         assert detection_rate >= 0.6, f"Bank fraud fallback detection rate: {detection_rate}"
     
     def test_upi_fraud_detection_rate(self):
@@ -124,7 +121,6 @@ class TestScamDetectorOnMockData:
                 detected += 1
         
         detection_rate = detected / len(messages) if messages else 0
-        # Fallback detection rate can be lower - LLM is primary detector
         assert detection_rate >= 0.5, f"UPI fraud fallback detection rate: {detection_rate}"
     
     def test_legitimate_messages_not_flagged(self):
@@ -152,7 +148,6 @@ class TestScamDetectorOnMockData:
                     detected_scams += 1
         
         accuracy = detected_scams / total_scams if total_scams else 0
-        # Fallback accuracy is lower - LLM handles most detection
         assert accuracy >= 0.5, f"Overall fallback detection accuracy: {accuracy}"
 
 

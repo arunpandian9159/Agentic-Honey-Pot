@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
 import os
 
-# Set test environment variables
 os.environ["API_SECRET_KEY"] = "test-api-key-12345"
 os.environ["GROQ_API_KEY"] = "test-groq-key"
 os.environ["ENVIRONMENT"] = "testing"
@@ -67,7 +66,6 @@ class TestChatEndpointAuth:
                 }
             }
         )
-        # FastAPI returns 422 for missing required header
         assert response.status_code == 422
     
     def test_chat_with_invalid_api_key_returns_401(self):

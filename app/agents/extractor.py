@@ -8,7 +8,7 @@ import re
 import logging
 from typing import Dict, List
 
-from app.core.llm import GroqClient
+from app.llm.client import GroqClient
 
 logger = logging.getLogger(__name__)
 

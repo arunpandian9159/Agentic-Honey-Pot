@@ -7,7 +7,7 @@ import random
 import datetime
 from typing import Dict, List
 from app.core.config import settings
-from app.agents.extraction_strategies import get_guided_tactic
+from app.intelligence.parsers.extraction_strategies import get_guided_tactic
 
 
 class ContextAwareManager:

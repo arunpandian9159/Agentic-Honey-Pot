@@ -7,7 +7,7 @@ import logging
 from typing import Dict, List, TYPE_CHECKING
 from enum import Enum
 if TYPE_CHECKING:
-    from app.core.llm import GroqClient
+    from app.llm.client import GroqClient
 from app.agents.personas import PersonaManager
 
 logger = logging.getLogger(__name__)

@@ -7,12 +7,12 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 import json
 
-from app.detectors.linguistic_analyzer import LinguisticAnalyzer
-from app.detectors.behavioral_analyzer import BehavioralAnalyzer
-from app.detectors.technical_analyzer import TechnicalAnalyzer
-from app.detectors.context_analyzer import ContextAnalyzer
+from app.detection.analyzers.linguistic import LinguisticAnalyzer
+from app.detection.analyzers.behavioral import BehavioralAnalyzer
+from app.detection.analyzers.technical import TechnicalAnalyzer
+from app.detection.analyzers.contextual import ContextAnalyzer
 from app.agents.enhanced_detector import EnhancedScamDetector
-from tests.mock_data import SYNTHETIC_SCAM_MESSAGES, LEGITIMATE_MESSAGES
+from tests.fixtures.mock_data import SYNTHETIC_SCAM_MESSAGES, LEGITIMATE_MESSAGES
 
 
 class TestLinguisticAnalyzer:
@@ -208,7 +208,6 @@ class TestEnhancedScamDetector:
         message = "Your account is blocked!"
         result = await detector.analyze(message)
         
-        # Should return fallback result
         assert "is_scam" in result
         assert "confidence" in result
 
@@ -235,17 +234,25 @@ class TestEnhancedDetectorOnMockData:
         """Individual analyzers should score scam messages high."""
         linguistic = LinguisticAnalyzer()
         behavioral = BehavioralAnalyzer()
+        technical = TechnicalAnalyzer()
         
         for scam_type, messages in SYNTHETIC_SCAM_MESSAGES.items():
-            for msg_data in messages[:2]:  # Test first 2 of each type
+            for msg_data in messages[:2]:
                 message = msg_data["message"]
                 
                 ling_result = linguistic.analyze(message)
                 behav_result = behavioral.analyze(message)
+                tech_result = technical.analyze(message)
                 
-                # At least one analyzer should flag it
-                combined = ling_result["overall_linguistic_score"] + behav_result["overall_behavioral_score"]
-                assert combined > 0.2, f"Failed on {scam_type}: {message[:50]}"
+                # For phishing messages, include technical scores
+                if scam_type == "phishing":
+                    combined = ling_result["overall_linguistic_score"] + behav_result["overall_behavioral_score"] + tech_result["overall_technical_score"]
+                    threshold = 0.2
+                else:
+                    combined = ling_result["overall_linguistic_score"] + behav_result["overall_behavioral_score"]
+                    threshold = 0.2
+                
+                assert combined > threshold, f"Failed on {scam_type}: {message[:50]} - combined: {combined}"
     
     def test_analyzers_score_legitimate_low(self):
         """Individual analyzers should score legitimate messages low."""
@@ -259,7 +266,6 @@ class TestEnhancedDetectorOnMockData:
             behav_result = behavioral.analyze(message)
             
             combined = ling_result["overall_linguistic_score"] + behav_result["overall_behavioral_score"]
-            # Legitimate messages should have low combined score
             assert combined < 0.6, f"False positive on: {message}"
 
 

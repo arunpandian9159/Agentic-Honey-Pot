@@ -8,12 +8,12 @@ to produce accurate scam detection with low false positives.
 import logging
 from typing import Dict, List, Optional
 
-from app.detectors.linguistic_analyzer import LinguisticAnalyzer
-from app.detectors.behavioral_analyzer import BehavioralAnalyzer
-from app.detectors.technical_analyzer import TechnicalAnalyzer
-from app.detectors.context_analyzer import ContextAnalyzer
-from app.detectors.llm_detector import AdvancedLLMDetector
-from app.core.detection_config import DETECTION_CONFIG
+from app.detection.analyzers.linguistic import LinguisticAnalyzer
+from app.detection.analyzers.behavioral import BehavioralAnalyzer
+from app.detection.analyzers.technical import TechnicalAnalyzer
+from app.detection.analyzers.contextual import ContextAnalyzer
+from app.detection.analyzers.llm_analyzer import AdvancedLLMDetector
+from app.detection.config import DETECTION_CONFIG
 
 logger = logging.getLogger(__name__)
 

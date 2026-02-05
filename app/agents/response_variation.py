@@ -7,7 +7,7 @@ import random
 import re
 from typing import Dict, List
 
-from app.agents.enhanced_personas import ENHANCED_PERSONAS
+from app.agents.personas.enhanced_personas import ENHANCED_PERSONAS
 
 
 class ResponseVariationEngine:

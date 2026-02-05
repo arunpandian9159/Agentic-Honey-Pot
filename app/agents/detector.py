@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
-from app.core.llm import GroqClient
+from app.llm.client import GroqClient
 
 logger = logging.getLogger(__name__)
 

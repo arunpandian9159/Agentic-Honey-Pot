@@ -4,17 +4,17 @@ Tests the human-like response generation features.
 """
 
 import pytest
-from app.agents.enhanced_personas import (
+from app.agents.personas.enhanced_personas import (
     ENHANCED_PERSONAS,
     get_persona,
     get_random_opening,
     get_random_closing,
     should_add_typo
 )
-from app.agents.response_variation import ResponseVariationEngine
-from app.agents.natural_flow import NaturalConversationFlow, get_stage_guidance
-from app.agents.emotional_intelligence import EmotionalIntelligence
-from app.agents.context_aware import ContextAwareManager, get_concise_context
+from app.agents.humanization.variation_engine import ResponseVariationEngine
+from app.agents.humanization.natural_flow import NaturalConversationFlow, get_stage_guidance
+from app.agents.humanization.emotional_intelligence import EmotionalIntelligence
+from app.agents.humanization.context_aware import ContextAwareManager, get_concise_context
 
 
 class TestEnhancedPersonas:
@@ -114,9 +114,8 @@ class TestResponseVariationEngine:
             )
             responses.append(response)
         
-        # At least some responses should be different
         unique_responses = set(responses)
-        assert len(unique_responses) >= 1  # May have some variation
+        assert len(unique_responses) >= 1
     
     def test_fallback_response_not_empty(self):
         """Fallback responses should not be empty."""
@@ -156,7 +155,6 @@ class TestNaturalConversationFlow:
         mid_guidance = get_stage_guidance(5)
         late_guidance = get_stage_guidance(10)
         
-        # Each stage should have different guidance
         assert early_guidance != late_guidance
 
 

@@ -15,10 +15,10 @@ from fastapi import APIRouter, HTTPException, Header, Depends, Query
 
 from app.core.config import settings
 from app.core.session import SessionManager
-from app.core.llm import GroqClient
+from app.llm.client import GroqClient
 from app.agents.optimized import OptimizedAgent
-from app.agents.extractor import IntelligenceExtractor
-from app.utils.callbacks import GUVICallback
+from app.intelligence.extractor import IntelligenceExtractor
+from app.integrations.guvi_callback import GUVICallback
 from app.utils.rate_limiter import rate_limiter
 from app.api.validators import (
     ChatRequest, ChatResponse, HealthResponse, MetricsResponse

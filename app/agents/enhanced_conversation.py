@@ -9,17 +9,17 @@ import random
 import re
 from typing import Dict, List, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
-    from app.core.llm import GroqClient
-from app.agents.enhanced_personas import (
+    from app.llm.client import GroqClient
+from app.agents.personas.enhanced_personas import (
     ENHANCED_PERSONAS, 
     get_persona, 
     get_random_opening,
     should_add_typo
 )
-from app.agents.response_variation import ResponseVariationEngine
-from app.agents.natural_flow import NaturalConversationFlow, get_stage_guidance
-from app.agents.emotional_intelligence import EmotionalIntelligence
-from app.agents.context_aware import ContextAwareManager, get_concise_context
+from app.agents.humanization.variation_engine import ResponseVariationEngine
+from app.agents.humanization.natural_flow import NaturalConversationFlow, get_stage_guidance
+from app.agents.humanization.emotional_intelligence import EmotionalIntelligence
+from app.agents.humanization.context_aware import ContextAwareManager, get_concise_context
 
 logger = logging.getLogger(__name__)
 

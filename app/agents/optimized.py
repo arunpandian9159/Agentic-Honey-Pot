@@ -10,12 +10,12 @@ import logging
 import random
 from typing import Dict, List, Optional
 
-from app.core.llm import GroqClient
+from app.llm.client import GroqClient
 from app.agents.personas import PersonaManager
-from app.agents.enhanced_personas import ENHANCED_PERSONAS, get_persona
-from app.agents.response_variation import ResponseVariationEngine
-from app.agents.natural_flow import get_stage_guidance
-from app.agents.context_aware import get_concise_context
+from app.agents.personas.enhanced_personas import ENHANCED_PERSONAS, get_persona
+from app.agents.humanization.variation_engine import ResponseVariationEngine
+from app.agents.humanization.natural_flow import get_stage_guidance
+from app.agents.humanization.context_aware import get_concise_context
 
 logger = logging.getLogger(__name__)
 

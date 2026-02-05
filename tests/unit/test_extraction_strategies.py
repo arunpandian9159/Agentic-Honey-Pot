@@ -1,6 +1,7 @@
 import pytest
-from app.agents.extraction_strategies import get_guided_tactic, EXTRACTION_STRATEGIES
+from app.intelligence.parsers.extraction_strategies import get_guided_tactic, EXTRACTION_STRATEGIES
 from app.core.config import settings
+
 
 def make_session():
     return {
@@ -19,17 +20,20 @@ def make_session():
         "persona": "tech_naive_parent"
     }
 
+
 def test_no_guided_tactic_before_early_stage():
     session = make_session()
     text, tid = get_guided_tactic(session, settings.EARLY_STAGE_LIMIT, session.get("persona"))
     assert text == ""
     assert tid == ""
 
+
 def test_need_upi_selected_when_missing():
     session = make_session()
     text, tid = get_guided_tactic(session, settings.EARLY_STAGE_LIMIT + 1, session.get("persona"))
     assert text != ""
     assert tid.startswith("need_upi") or tid.startswith("need_bank_account")
+
 
 def test_cooldown_avoids_repeating_tactic():
     session = make_session()

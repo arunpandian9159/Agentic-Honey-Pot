@@ -5,7 +5,6 @@ Contains realistic scam message scenarios for various scam types.
 
 from typing import Dict, List
 
-# Synthetic scam messages organized by type
 SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
     "bank_fraud": [
         {
@@ -34,7 +33,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "high"
         }
     ],
-    
     "upi_fraud": [
         {
             "message": "Congratulations! You've won ₹50,000 in our lucky draw! Claim now by sending ₹99 processing fee to winner2024@oksbi",
@@ -57,7 +55,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "medium"
         }
     ],
-    
     "phishing": [
         {
             "message": "Your Netflix subscription expires today! Update payment: https://netflix-renewal.secure-pay.in/update",
@@ -80,7 +77,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "high"
         }
     ],
-    
     "tech_support": [
         {
             "message": "Microsoft Alert: Virus detected on your computer! Call immediately: +91-9988776655 for remote assistance.",
@@ -98,7 +94,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "critical"
         }
     ],
-    
     "job_scam": [
         {
             "message": "Congratulations! You're selected for Data Entry job at Google. Salary: ₹50,000/month. Pay ₹2,000 registration fee to jobs@secure-pay.in",
@@ -116,7 +111,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "medium"
         }
     ],
-    
     "investment": [
         {
             "message": "Double your money in 24 hours! Guaranteed 200% returns. Invest now: investment.guru@icici",
@@ -134,7 +128,6 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
             "urgency": "low"
         }
     ],
-    
     "lottery": [
         {
             "message": "You've won ₹25 Lakhs in International Lottery! Claim by paying ₹5,000 tax to lottery.claim@ybl",
@@ -149,19 +142,14 @@ SYNTHETIC_SCAM_MESSAGES: Dict[str, List[Dict]] = {
     ]
 }
 
-# Multi-turn conversation test scenarios
 CONVERSATION_FLOW_TESTS: List[Dict] = [
     {
         "name": "Bank Fraud Flow",
         "messages": [
             {"sender": "scammer", "text": "Dear customer, your SBI account will be blocked. Verify immediately."},
-            # AI response expected here
             {"sender": "scammer", "text": "This is SBI customer care. Share your details or account will be suspended today."},
-            # AI response expected here
             {"sender": "scammer", "text": "Pay ₹10 verification fee to verify.sbi@ybl to unblock your account."},
-            # AI response expected here - should ask for confirmation
             {"sender": "scammer", "text": "Yes, pay to verify.sbi@ybl. Do it now to avoid permanent block."},
-            # AI should have extracted upi_id by now
         ],
         "expected_scam_type": "bank_fraud",
         "expected_intel": ["verify.sbi@ybl"]
@@ -170,11 +158,8 @@ CONVERSATION_FLOW_TESTS: List[Dict] = [
         "name": "Job Scam Flow",
         "messages": [
             {"sender": "scammer", "text": "Hi, you're shortlisted for Amazon data entry job. Interested?"},
-            # AI response
             {"sender": "scammer", "text": "Great! Salary is ₹45,000/month. Work from home. Just need to pay registration fee of ₹1,500."},
-            # AI response
             {"sender": "scammer", "text": "Pay to amazon.hr@paytm. After payment, you'll receive joining letter."},
-            # AI should extract upi_id
         ],
         "expected_scam_type": "job_scam",
         "expected_intel": ["amazon.hr@paytm"]
@@ -183,16 +168,13 @@ CONVERSATION_FLOW_TESTS: List[Dict] = [
         "name": "Tech Support Flow",
         "messages": [
             {"sender": "scammer", "text": "Alert! Your computer has been hacked. Hackers accessing your bank details right now."},
-            # AI response
             {"sender": "scammer", "text": "I am from Microsoft Security. Call us immediately at 9876540000 to secure your computer."},
-            # AI should extract phone number
         ],
         "expected_scam_type": "tech_support",
         "expected_intel": ["9876540000"]
     }
 ]
 
-# Non-scam messages for false positive testing
 LEGITIMATE_MESSAGES: List[Dict] = [
     {
         "message": "Hi, how are you doing today?",
@@ -216,7 +198,6 @@ LEGITIMATE_MESSAGES: List[Dict] = [
     }
 ]
 
-# Edge case messages
 EDGE_CASES: List[Dict] = [
     {
         "message": "Send money",
@@ -238,7 +219,6 @@ EDGE_CASES: List[Dict] = [
 
 
 def get_all_scam_messages() -> List[Dict]:
-    """Get all scam messages as a flat list."""
     all_messages = []
     for scam_type, messages in SYNTHETIC_SCAM_MESSAGES.items():
         for msg in messages:
@@ -250,5 +230,4 @@ def get_all_scam_messages() -> List[Dict]:
 
 
 def get_messages_by_type(scam_type: str) -> List[Dict]:
-    """Get scam messages for a specific type."""
     return SYNTHETIC_SCAM_MESSAGES.get(scam_type, [])
