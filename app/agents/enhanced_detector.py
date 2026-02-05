@@ -152,11 +152,20 @@ class EnhancedScamDetector:
         # Make final decision
         is_scam = overall_score >= self.confidence_threshold
         
-        # If LLM is very confident, trust it more
         llm_confidence = llm.get("confidence", 0.5)
+        llm_is_scam = llm.get("is_scam")
+        if llm_is_scam is not None and llm_confidence >= self.confidence_threshold:
+            if llm_is_scam:
+                is_scam = True
+                overall_score = max(overall_score, llm_confidence)
+            else:
+                is_scam = False
+                overall_score = min(overall_score, 1 - llm_confidence)
+        
+        # If LLM is very confident, trust it more
         if llm_confidence >= self.llm_high_confidence:
-            is_scam = llm.get("is_scam", is_scam)
-            overall_score = llm_confidence if llm.get("is_scam") else (1 - llm_confidence)
+            is_scam = llm_is_scam if llm_is_scam is not None else is_scam
+            overall_score = llm_confidence if llm_is_scam else (1 - llm_confidence)
         
         # Collect red flags and legitimacy signals
         red_flags = self._collect_red_flags(

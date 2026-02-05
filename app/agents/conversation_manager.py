@@ -151,7 +151,7 @@ class ConversationManager(AgentInterface):
             conversation_history = session.get("conversation_history", [])
             return await self.detection_service.analyze(
                 message=message,
-                conversation_history=conversation_history,
+                history=conversation_history,
                 metadata=metadata
             )
         except Exception as e:

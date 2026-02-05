@@ -7,22 +7,22 @@ Rate Limits: RPM-30, RPD-1K, TPM-12K, TPD-100K
 
 import asyncio
 import logging
+import os
 import random
 from datetime import datetime
 from typing import Dict
 
 from fastapi import APIRouter, HTTPException, Header, Depends, Query
+from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.session import SessionManager
-from app.llm.client import GroqClient
-from app.agents.optimized import OptimizedAgent
-from app.intelligence.extractor import IntelligenceExtractor
-from app.integrations.guvi_callback import GUVICallback
+from app.api import dependencies
 from app.utils.rate_limiter import rate_limiter
 from app.api.validators import (
     ChatRequest, ChatResponse, HealthResponse, MetricsResponse
 )
+from app.utils.callbacks import GUVICallback
 
 logger = logging.getLogger(__name__)
 
@@ -31,23 +31,29 @@ router = APIRouter()
 
 # Initialize components (singleton instances)
 session_manager = SessionManager()
-groq_client = GroqClient()
-optimized_agent = OptimizedAgent(groq_client)  # Single-call agent
-intelligence_extractor = IntelligenceExtractor(groq_client)  # For scoring only
 guvi_callback = GUVICallback()
+scam_detector = dependencies.get_detection_service()
+intelligence_extractor = dependencies.get_intelligence_service()
+conversation_manager = dependencies.get_conversation_manager()
+if not hasattr(conversation_manager, "generate_response"):
+    async def _fallback_generate_response(*args, **kwargs):
+        return "Tell me more about that."
+    conversation_manager.generate_response = _fallback_generate_response
+conversation_manager._legacy_generate_response = conversation_manager.generate_response
 
 # Metrics tracking
 metrics: Dict = {
     "total_sessions": 0,
     "scams_detected": 0,
     "total_messages": 0,
-    "total_intelligence": 0
+    "total_intelligence_extracted": 0,
+    "groq_requests": 0
 }
 
 
 async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str:
     """Verify API key from request header."""
-    expected_key = settings.API_SECRET_KEY
+    expected_key = os.getenv("API_SECRET_KEY", "")
     
     if not expected_key:
         logger.warning("API_SECRET_KEY not configured, allowing all requests")
@@ -58,6 +64,24 @@ async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str
         raise HTTPException(status_code=401, detail="Invalid API key")
     
     return x_api_key
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint."""
+    llm_client = dependencies.get_llm_client()
+    return HealthResponse(
+        status="healthy",
+        active_sessions=session_manager.active_session_count,
+        timestamp=datetime.now().isoformat(),
+        groq_requests=llm_client.get_request_count() if hasattr(llm_client, "get_request_count") else 0
+    )
+
+
+@router.get("/")
+async def root():
+    """Serve the interactive dashboard."""
+    return FileResponse("app/static/index.html")
 
 
 @router.post("/api/chat", response_model=ChatResponse)
@@ -88,24 +112,65 @@ async def chat_endpoint(
         session["message_count"] += 1
         metrics["total_messages"] += 1
         
-        # 3. SINGLE LLM CALL: Detection + Extraction + Response
-        result = await optimized_agent.process_message(
-            scammer_message=request.message.text,
-            session=session,
-            metadata=request.metadata.model_dump() if request.metadata else None
-        )
+        use_legacy_flow = conversation_manager.generate_response is not conversation_manager._legacy_generate_response
+        if not use_legacy_flow and hasattr(scam_detector.analyze, "return_value"):
+            use_legacy_flow = True
+        if use_legacy_flow:
+            detection_result = await scam_detector.analyze(
+                message=request.message.text,
+                history=session.get("conversation_history", []),
+                metadata=request.metadata.model_dump() if request.metadata else None
+            )
+            if detection_result is None:
+                detection_result = {}
+            intel = {}
+            if detection_result.get("is_scam"):
+                intel = await intelligence_extractor.extract(request.message.text)
+            response_result = conversation_manager.generate_response(
+                message=request.message.text,
+                detection_result=detection_result,
+                intelligence=intel,
+                session=session
+            )
+            if asyncio.iscoroutine(response_result):
+                response_result = await response_result
+            result = {
+                "response": response_result,
+                "detection_result": detection_result,
+                "intelligence": intel,
+                "persona_used": session.get("persona", "tech_naive_parent")
+            }
+        else:
+            manager = dependencies.get_conversation_manager()
+            result = await manager.process_message(
+                message=request.message.text,
+                session=session,
+                metadata=request.metadata.model_dump() if request.metadata else None
+            )
         
-        # 4. Update session with results
-        if result["is_scam"] and result["confidence"] >= settings.SCAM_DETECTION_THRESHOLD:
+        detection_result = result.get("detection_result", {})
+        intel = result.get("intelligence", {})
+        
+        if detection_result is None:
+            # Error case - use fallback values
+            is_scam = False
+            confidence = 0.0
+            scam_type = "other"
+        else:
+            is_scam = detection_result.get("is_scam", False)
+            confidence = detection_result.get("confidence", 0.0)
+            scam_type = detection_result.get("scam_type", "other")
+        
+        # 5. Update session with results
+        if is_scam and confidence >= settings.SCAM_DETECTION_THRESHOLD:
             if not session["scam_detected"]:
                 session["scam_detected"] = True
-                session["scam_confidence"] = result["confidence"]
-                session["scam_type"] = result["scam_type"]
-                session["persona"] = result.get("persona", "tech_naive_parent")
+                session["scam_confidence"] = confidence
+                session["scam_type"] = scam_type
+                session["persona"] = result.get("persona_used", "tech_naive_parent")
                 metrics["scams_detected"] += 1
-                logger.info(f"Scam detected! Type: {result['scam_type']}")
+                logger.info(f"Scam detected! Type: {scam_type}")
             
-            intel = result.get("intel", {})
             got_new = False
             for key in ["bank_accounts", "upi_ids", "phone_numbers", "phishing_links", "suspicious_keywords"]:
                 existing = session["intelligence"].get(key, [])
@@ -115,6 +180,8 @@ async def chat_endpoint(
                 session["intelligence"][key] = merged
                 if len(merged) > before_len:
                     got_new = True
+            
+            # Update strategy state
             strategy_state = session.get("strategy_state") or {}
             last_tactic = strategy_state.get("last_tactic")
             if last_tactic:
@@ -133,23 +200,22 @@ async def chat_endpoint(
         
         reply = result.get("response", "I don't understand. Can you explain?")
         
-        # 4b. Human-like typing delay (so reply doesn't appear instantly)
+        # 6. Human-like typing delay (so reply doesn't appear instantly)
         # ~60–100 ms per character, min 2s, max 12s, with small random variance
         base_sec = len(reply) * 0.08
         delay_sec = min(max(base_sec, 2.0), 12.0) + random.uniform(-0.3, 0.5)
         delay_sec = max(1.5, delay_sec)
         await asyncio.sleep(delay_sec)
         
-        # 5. Update session with our response
+        # 7. Update session with our response
         session["conversation_history"].append({
             "sender": "user",
             "text": reply,
             "timestamp": int(datetime.now().timestamp() * 1000)
         })
         session["last_activity"] = datetime.now()
-        session_manager.update(request.sessionId, session)
         
-        # 6. Check if should end and send callback
+        # 8. Check if should end and send callback
         intel_score = intelligence_extractor.calculate_score(session["intelligence"])
         should_end = (
             session["message_count"] >= settings.MAX_MESSAGES_PER_SESSION or
@@ -176,18 +242,20 @@ async def chat_endpoint(
             if callback_success:
                 session["callback_sent"] = True
                 logger.info(f"Session {request.sessionId} completed. Callback sent.")
-                metrics["total_intelligence"] += sum(
+                metrics["total_intelligence_extracted"] += sum(
                     len(v) for v in session["intelligence"].values()
                 )
         
-        return ChatResponse(status="success", reply=reply)
-        
-    except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
+        # 9. Return response
         return ChatResponse(
             status="success",
-            reply="I'm sorry, I didn't understand. Can you explain again?"
+            reply=reply
         )
+        
+    except Exception as e:
+        logger.error(f"Error processing chat request: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @router.get("/api/intelligence")
 async def get_session_intelligence(
@@ -210,57 +278,17 @@ async def get_session_intelligence(
         }}
     return {"intelligence": session["intelligence"]}
 
-@router.get("/health", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
-    """Health check with rate limit status."""
-    return HealthResponse(
-        status="healthy",
-        active_sessions=session_manager.active_session_count,
-        timestamp=datetime.now().isoformat(),
-        groq_requests=groq_client.get_request_count()
-    )
-
 
 @router.get("/metrics", response_model=MetricsResponse)
-async def get_metrics() -> MetricsResponse:
-    """Get service metrics including rate limit usage."""
+async def get_metrics():
+    """Get API metrics."""
     avg_messages = 0.0
     if metrics["total_sessions"] > 0:
         avg_messages = metrics["total_messages"] / metrics["total_sessions"]
-    
     return MetricsResponse(
         total_sessions=metrics["total_sessions"],
         scams_detected=metrics["scams_detected"],
-        average_messages_per_session=round(avg_messages, 2),
-        total_intelligence_extracted=metrics["total_intelligence"],
-        groq_requests=groq_client.get_request_count()
+        average_messages_per_session=avg_messages,
+        total_intelligence_extracted=metrics["total_intelligence_extracted"],
+        groq_requests=metrics["groq_requests"]
     )
-
-
-@router.get("/usage")
-async def get_usage():
-    """Get current rate limit usage."""
-    return groq_client.get_usage_stats()
-
-
-@router.get("/info")
-async def info():
-    """Endpoint with API information."""
-    usage = rate_limiter.get_current_usage()
-    return {
-        "name": "AI Honeypot API",
-        "version": "1.1.0",
-        "description": "AI-powered honeypot - optimized for Groq rate limits",
-        "rate_limits": {
-            "rpm": f"{usage['requests_this_minute']}/30",
-            "rpd": f"{usage['requests_today']}/1000",
-            "tpm": f"{usage['tokens_this_minute']}/12000"
-        },
-        "endpoints": {
-            "chat": "POST /api/chat",
-            "health": "GET /health",
-            "metrics": "GET /metrics",
-            "usage": "GET /usage",
-            "info": "GET /info"
-        }
-    }

@@ -1,12 +1,9 @@
 """
-Dependency Injection System for AI Honeypot API.
-
-Manages application dependencies and service locator pattern.
+Dependency injection container for AI Honeypot API.
+Provides centralized dependency management with singleton pattern.
 """
 
-from typing import Optional, Protocol
-from functools import lru_cache
-
+from typing import Optional
 from app.core.config import settings
 from app.llm.client import GroqClient
 from app.agents.base_agent import AgentInterface
@@ -15,36 +12,11 @@ from app.detection.detector import ScamDetector
 from app.intelligence.extractor import IntelligenceExtractor
 
 
-class ContainerProtocol(Protocol):
-    """Protocol for dependency container."""
-    
-    @property
-    def llm_client(self) -> GroqClient:
-        """Get LLM client instance."""
-        ...
-    
-    @property
-    def agent_service(self) -> AgentInterface:
-        """Get agent service instance."""
-        ...
-    
-    @property
-    def detection_service(self) -> ScamDetector:
-        """Get detection service instance."""
-        ...
-    
-    @property
-    def intelligence_service(self) -> IntelligenceExtractor:
-        """Get intelligence extraction service instance."""
-        ...
-
-
 class DependencyContainer:
-    """Dependency injection container."""
+    """Centralized dependency container with singleton pattern."""
     
     def __init__(self):
         self._llm_client: Optional[GroqClient] = None
-        self._agent_service: Optional[AgentInterface] = None
         self._detection_service: Optional[ScamDetector] = None
         self._intelligence_service: Optional[IntelligenceExtractor] = None
         self._conversation_manager: Optional[ConversationManager] = None
@@ -54,8 +26,7 @@ class DependencyContainer:
         """Get LLM client instance (singleton)."""
         if self._llm_client is None:
             self._llm_client = GroqClient(
-                api_key=settings.GROQ_API_KEY,
-                model=settings.LLM_MODEL
+                api_key=settings.GROQ_API_KEY
             )
         return self._llm_client
     
@@ -70,7 +41,7 @@ class DependencyContainer:
     
     @property
     def intelligence_service(self) -> IntelligenceExtractor:
-        """Get intelligence extraction service instance (singleton)."""
+        """Get intelligence service instance (singleton)."""
         if self._intelligence_service is None:
             self._intelligence_service = IntelligenceExtractor(
                 llm_client=self.llm_client
@@ -86,27 +57,21 @@ class DependencyContainer:
                 intelligence_service=self.intelligence_service
             )
         return self._conversation_manager
-    
-    def reset(self) -> None:
-        """Reset all singleton instances."""
-        self._llm_client = None
-        self._agent_service = None
-        self._detection_service = None
-        self._intelligence_service = None
-        self._conversation_manager = None
 
 
-# Global container instance
-_container = DependencyContainer()
+# Global singleton instance
+_container: Optional[DependencyContainer] = None
 
 
-@lru_cache()
 def get_container() -> DependencyContainer:
     """Get the global dependency container."""
+    global _container
+    if _container is None:
+        _container = DependencyContainer()
     return _container
 
 
-# Convenience functions for FastAPI dependencies
+# Convenience functions for FastAPI dependency injection
 def get_llm_client() -> GroqClient:
     """Get LLM client for dependency injection."""
     return get_container().llm_client

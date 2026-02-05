@@ -18,7 +18,8 @@ class BehavioralAnalyzer:
             r"(account|card|bank) (number|details|information)",
             r"confirm (your|the) (identity|details|information)",
             r"verify (by|your) (sending|sharing|providing)",
-            r"(what is|tell me) your (password|pin|account)"
+            r"(what is|tell me) your (password|pin|account)",
+            r"verify (your|the) (account|whatsapp|profile|details|identity)"
         ]
         
         # Sensitive terms
@@ -27,14 +28,15 @@ class BehavioralAnalyzer:
             'card number', 'aadhaar', 'pan'
         ]
         
-        # Payment request patterns
+        # Payment request patterns - ENHANCED
         self.payment_patterns = [
-            r"(send|transfer|pay|deposit) (money|amount|payment|₹|rs\.?)",
+            r"(send|transfer|pay|deposit|paying) (money|amount|payment|₹|rs\.?)",
             r"pay (the |a )?fee",
             r"(registration|processing|handling|service) (fee|charge|cost)",
-            r"(send|pay) ₹?\d+",
+            r"(send|pay|paying) ₹?\d+",
             r"transfer to (this |the )?(account|upi|number)",
-            r"payment (of|for) ₹?\d+"
+            r"payment (of|for) ₹?\d+",
+            r"claim by (paying|transferring|sending)"  # Added for lottery scams
         ]
         
         # Time pressure patterns

@@ -21,7 +21,8 @@ class LinguisticAnalyzer:
             ],
             "high": [
                 r"soon|quickly|fast|rapid|prompt",
-                r"limited time|ending soon|almost over"
+                r"limited time|ending soon|almost over",
+                r"24 hours|within.*hours"  # Added for investment scams
             ],
             "medium": [
                 r"please|kindly|at your earliest|as soon as possible"
@@ -45,12 +46,14 @@ class LinguisticAnalyzer:
             r"customer (support|service|care) (team|department)"
         ]
         
-        # Manipulation patterns - FIXED to be more flexible
+        # Manipulation patterns - ENHANCED for better detection
         self.manipulation_patterns = [
             r"congratulations|you('ve)? (won|win|are selected|qualified)",
             r"exclusive|special|limited|selected (customers?|users?)",
             r"free|bonus|reward|prize|gift",
-            r"guaranteed|assured|confirmed|approved"
+            r"guaranteed|assured|confirmed|approved",
+            r"double your (money|investment|returns?)",  # Added for investment scams
+            r"200%|300%|500%|1000%.*returns?"  # Added for unrealistic returns
         ]
         
         # Common scam misspellings
