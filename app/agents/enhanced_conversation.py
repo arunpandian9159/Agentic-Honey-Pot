@@ -113,6 +113,7 @@ class EnhancedConversationManager:
                 humanized = self._ensure_sentence_complete(varied.strip())
             self.conversation_memory.add_response(session_id, humanized)
             result["response"] = humanized
+            logger.info(f"Final humanized response: '{humanized}'")
             logger.info(
                 f"Enhanced result: scam={result['is_scam']}, "
                 f"type={result['scam_type']}, persona={persona_name}, msg#{msg_count}"
