@@ -224,70 +224,51 @@ class ResponseVariationEngine:
         
         return text
     
-    # Minimum words/chars so we never return fragment replies like "I'm" or "that"
     MIN_WORDS = 8
     MIN_CHARS = 35
 
     def _adjust_length(self, text: str, persona: Dict) -> str:
-        """Adjust response length based on persona distribution. Ensure truncated outputs end with complete sentences."""
+        """Adjust response length based on persona distribution."""
         length_dist = persona.get("message_length_distribution", {})
         words = text.split()
         word_count = len(words)
+
+        # Don't prune short responses
+        if word_count <= self.MIN_WORDS or len(text) <= self.MIN_CHARS:
+            return text
+
+        # Determine target category from distribution
         rand = random.random()
         cumulative = 0
         target_category = "medium"
-        
         for category, probability in length_dist.items():
             cumulative += probability
             if rand < cumulative:
                 target_category = category
                 break
-        
-        # If the response is already short, don't prune it further if it's below our minimum thresholds
-        if word_count <= self.MIN_WORDS or len(text) <= self.MIN_CHARS:
-            return text
 
-        # Helper to get the first sentence
-        def get_first_sentence(t: str) -> str:
-            # Try to find the first terminal punctuation
-            match = re.search(r'[.!?]', t)
-            if match:
-                return t[:match.end()].strip()
-            return t
-
-        if target_category == "very_short":
-            # For very short, try to just take the first sentence
-            first_sent = get_first_sentence(text)
-            if len(first_sent.split()) >= 3 and len(first_sent) >= self.MIN_CHARS:
-                return first_sent
-            
-            # Fallback to a slice if first sentence is too microscopic or non-existent
-            if word_count > self.MIN_WORDS:
-                n = random.randint(self.MIN_WORDS, min(10, word_count))
-                shortened = " ".join(words[:n]).strip()
-                if shortened and shortened[-1] not in ".!?,":
-                    shortened += "?" if any(q in shortened.lower() for q in ["what", "why", "how", "can"]) else "."
-                return shortened
-                
+        # Prune based on target category
+        if target_category == "very_short" and word_count > 10:
+            return self._prune_to_short(words, word_count, text)
         elif target_category == "short" and word_count > 12:
-            # For short, we might take the first 1-2 sentences
             sentences = re.split(r'(?<=[.!?])\s+', text)
             if len(sentences) > 1:
                 return sentences[0]
-            
-            # Fallback to a slightly longer slice
-            n = random.randint(max(self.MIN_WORDS, 10), min(15, word_count))
-            shortened = " ".join(words[:n]).strip()
-            if shortened and shortened[-1] not in ".!?":
-                shortened += "?" if "?" in text else "."
-            return shortened
-
-        if target_category == "long" and word_count < 15:
+            return self._prune_to_short(words, word_count, text)
+        elif target_category == "long" and word_count < 15:
             fillers = persona.get("vocabulary", {}).get("filler_phrases", [])
             if fillers:
-                text += f" {random.choice(fillers)}"
-        
+                return text + f" {random.choice(fillers)}"
+
         return text
+
+    def _prune_to_short(self, words: List[str], word_count: int, text: str) -> str:
+        """Prune text to a shorter length."""
+        n = random.randint(self.MIN_WORDS, min(10, word_count))
+        shortened = " ".join(words[:n]).strip()
+        if shortened and shortened[-1] not in ".!?,":
+            shortened += "?" if any(q in shortened.lower() for q in ["what", "why", "how", "can"]) else "."
+        return shortened
     
     def _add_emotional_markers(
         self,

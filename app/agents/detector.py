@@ -117,57 +117,48 @@ For clear scam patterns, set confidence to 0.85+.
             logger.warning(f"LLM detection failed, using fallback: {str(e)}")
             return self._fallback_detection(message)
     
+    # Keyword-to-scam-type mapping for fallback classification
+    SCAM_TYPE_KEYWORDS = {
+        "bank_fraud": ["bank", "account", "kyc"],
+        "upi_fraud": ["upi", "@"],
+        "phishing": ["http", "link", "click"],
+        "lottery": ["prize", "lottery", "winner"],
+        "job_scam": ["job", "work from home", "registration"],
+        "investment": ["investment", "returns", "double"],
+        "tech_support": ["virus", "microsoft", "tech support"],
+    }
+
     def _fallback_detection(self, message: str) -> Dict:
-        """
-        Simple keyword-based fallback detection if LLM fails.
-        
-        Args:
-            message: The message to analyze
-        
-        Returns:
-            Basic detection result
-        """
+        """Simple keyword-based fallback detection if LLM fails."""
         message_lower = message.lower()
-        
-        # Find matching keywords
+
         matches = [kw for kw in self.SCAM_KEYWORDS if kw in message_lower]
-        
-        # Calculate confidence based on matches
         confidence = min(len(matches) * 0.20, 0.95)
-        
-        # Determine scam type based on keywords
+
+        # Determine scam type from keywords
         scam_type = "other"
-        if any(kw in message_lower for kw in ["bank", "account", "kyc"]):
-            scam_type = "bank_fraud"
-        elif any(kw in message_lower for kw in ["upi", "@"]):
-            scam_type = "upi_fraud"
-        elif any(kw in message_lower for kw in ["http", "link", "click"]):
-            scam_type = "phishing"
-        elif any(kw in message_lower for kw in ["prize", "lottery", "winner"]):
-            scam_type = "lottery"
-        elif any(kw in message_lower for kw in ["job", "work from home", "registration"]):
-            scam_type = "job_scam"
-        elif any(kw in message_lower for kw in ["investment", "returns", "double"]):
-            scam_type = "investment"
-        elif any(kw in message_lower for kw in ["virus", "microsoft", "tech support"]):
-            scam_type = "tech_support"
-        
+        for stype, keywords in self.SCAM_TYPE_KEYWORDS.items():
+            if any(kw in message_lower for kw in keywords):
+                scam_type = stype
+                break
+
         # Determine urgency
-        urgency = "low"
-        if any(kw in message_lower for kw in ["urgent", "immediately", "now", "today"]):
-            urgency = "high"
-        elif any(kw in message_lower for kw in ["blocked", "suspended", "arrest", "legal"]):
+        if any(kw in message_lower for kw in ["blocked", "suspended", "arrest", "legal"]):
             urgency = "critical"
+        elif any(kw in message_lower for kw in ["urgent", "immediately", "now", "today"]):
+            urgency = "high"
         elif len(matches) >= 3:
             urgency = "medium"
-        
+        else:
+            urgency = "low"
+
         result = {
             "is_scam": len(matches) >= 2,
             "confidence": confidence,
             "scam_type": scam_type,
             "urgency_level": urgency,
-            "key_indicators": matches[:5]  # Limit to 5 indicators
+            "key_indicators": matches[:5]
         }
-        
+
         logger.info(f"Fallback detection result: {result}")
         return result
