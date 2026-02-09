@@ -34,7 +34,7 @@ def get_qdrant_client():
         _qdrant_client = QdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
-            timeout=30
+            timeout=5  # Reduced from 30s for faster failure detection
         )
         
         # Diagnostics

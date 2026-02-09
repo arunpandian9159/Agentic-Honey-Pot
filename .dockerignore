@@ -1,0 +1,47 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.eggs
+dist
+build
+
+# Virtual environments
+.venv
+venv
+env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Tests
+tests/
+
+# Documentation
+docs/
+plans/
+*.md
+LICENSE
+
+# CI/CD
+.github
+.qodo
+.zencoder
+.zenflow
+
+# OS files
+.DS_Store
+Thumbs.db

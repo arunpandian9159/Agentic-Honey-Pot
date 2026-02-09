@@ -1,6 +1,6 @@
 """
 Embedding generation for RAG system.
-Uses sentence-transformers for efficient semantic embeddings.
+Uses fastembed for fast, lightweight semantic embeddings.
 """
 
 import logging
@@ -13,13 +13,14 @@ _model = None
 
 
 def _get_model():
-    """Lazy load the embedding model."""
+    """Use fastembed for faster loading."""
     global _model
     if _model is None:
         try:
-            from sentence_transformers import SentenceTransformer
-            _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-            logger.info("✓ Loaded embedding model: all-MiniLM-L6-v2")
+            from fastembed import TextEmbedding
+            # fastembed models are pre-downloaded and cached
+            _model = TextEmbedding("sentence-transformers/all-MiniLM-L6-v2")
+            logger.info("✓ Loaded fastembed model: all-MiniLM-L6-v2")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
             return None
@@ -27,7 +28,7 @@ def _get_model():
 
 
 class EmbeddingGenerator:
-    """Generate embeddings for RAG system."""
+    """Generate embeddings using FastEmbed."""
     
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         """
@@ -46,11 +47,13 @@ class EmbeddingGenerator:
         return _get_model()
     
     def embed_text(self, text: str) -> Optional[List[float]]:
-        """Embed single text."""
-        if not self.model:
+        """Embed single text using fastembed."""
+        model = _get_model()
+        if not model:
             return None
         try:
-            embedding = self.model.encode(text, convert_to_tensor=False)
+            # fastembed returns generator, take first result
+            embedding = list(model.embed([text]))[0]
             return embedding.tolist()
         except Exception as e:
             logger.error(f"Embedding error: {e}")
@@ -58,11 +61,12 @@ class EmbeddingGenerator:
     
     def embed_batch(self, texts: List[str]) -> Optional[List[List[float]]]:
         """Embed multiple texts efficiently."""
-        if not self.model:
+        model = _get_model()
+        if not model:
             return None
         try:
-            embeddings = self.model.encode(texts, convert_to_tensor=False)
-            return embeddings.tolist()
+            embeddings = list(model.embed(texts))
+            return [e.tolist() for e in embeddings]
         except Exception as e:
             logger.error(f"Batch embedding error: {e}")
             return None

@@ -10,7 +10,7 @@ import os
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
     Handles startup and shutdown events.
+    RAG is initialized lazily on first request.
     """
     # Startup
     logger.info("=" * 50)
@@ -55,16 +56,8 @@ async def lifespan(app: FastAPI):
     
     logger.info(f"✓ Callback URL: {settings.GUVI_CALLBACK_URL}")
     
-    # Initialize RAG system if configured
-    from app.core.rag_config import is_rag_enabled, initialize_collections
-    if is_rag_enabled():
-        if initialize_collections():
-            logger.info("✓ RAG system initialized")
-        else:
-            logger.warning("⚠️ RAG initialization failed, continuing without RAG")
-    else:
-        logger.info("ℹ️ RAG disabled (QDRANT_URL/QDRANT_API_KEY not set)")
-    
+    # Note: RAG is initialized lazily on first request
+    # This reduces cold start time by 2-3 minutes
     logger.info("=" * 50)
     logger.info("🚀 AI Honeypot API Ready!")
     logger.info("Frontend is in http://localhost:8000/")
@@ -98,6 +91,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Lazy RAG initialization middleware
+@app.middleware("http")
+async def init_rag_on_first_request(request: Request, call_next):
+    """Lazy initialize RAG on first request to reduce startup time."""
+    if not hasattr(app.state, 'rag_initialized'):
+        from app.core.rag_config import is_rag_enabled, initialize_collections
+        if is_rag_enabled():
+            if initialize_collections():
+                logger.info("✓ RAG system initialized on first request")
+            else:
+                logger.warning("⚠️ RAG initialization failed, continuing without RAG")
+        else:
+            logger.info("ℹ️ RAG disabled (QDRANT_URL/QDRANT_API_KEY not set)")
+        app.state.rag_initialized = True
+    return await call_next(request)
+
 
 # Include API routes
 app.include_router(router)
