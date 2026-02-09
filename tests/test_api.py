@@ -40,15 +40,12 @@ class TestHealthEndpoint:
 class TestRootEndpoint:
     """Tests for root endpoint."""
     
-    def test_root_returns_api_info(self):
-        """Root endpoint should return API information."""
+    def test_root_returns_200(self):
+        """Root endpoint should return HTML dashboard."""
         response = client.get("/")
         assert response.status_code == 200
-        
-        data = response.json()
-        assert data["name"] == "AI Honeypot API"
-        assert "version" in data
-        assert "endpoints" in data
+        # Should be HTML not JSON
+        assert "text/html" in response.headers["content-type"]
 
 
 class TestChatEndpointAuth:
@@ -88,13 +85,13 @@ class TestChatEndpointAuth:
     
     def test_chat_with_valid_api_key_returns_200(self):
         """Request with valid API key should be processed."""
-        with patch('app.api.routes.scam_detector.analyze', new_callable=AsyncMock) as mock_detect:
-            mock_detect.return_value = {
+        with patch('app.api.routes.optimized_agent.process_message', new_callable=AsyncMock) as mock_process:
+            mock_process.return_value = {
                 "is_scam": False,
                 "confidence": 0.3,
                 "scam_type": "other",
-                "urgency_level": "low",
-                "key_indicators": []
+                "intel": {},
+                "response": "Hello!"
             }
             
             response = client.post(
@@ -161,28 +158,23 @@ class TestChatEndpointValidation:
 class TestChatEndpointFlow:
     """Tests for /api/chat conversation flow."""
     
-    @patch('app.api.routes.scam_detector.analyze', new_callable=AsyncMock)
-    @patch('app.api.routes.intelligence_extractor.extract', new_callable=AsyncMock)
-    @patch('app.api.routes.conversation_manager.generate_response', new_callable=AsyncMock)
+    @patch('app.api.routes.optimized_agent.process_message', new_callable=AsyncMock)
     def test_scam_detection_triggers_persona(
-        self, mock_generate, mock_extract, mock_detect
+        self, mock_process
     ):
-        """Detected scam should trigger persona assignment."""
-        mock_detect.return_value = {
+        """Detected scam should trigger response generation."""
+        mock_process.return_value = {
             "is_scam": True,
             "confidence": 0.85,
             "scam_type": "bank_fraud",
-            "urgency_level": "high",
-            "key_indicators": ["account blocked", "verify"]
+            "intel": {
+                "bank_accounts": [],
+                "upi_ids": [],
+                "phone_numbers": [],
+                "links": []
+            },
+            "response": "Oh dear, my account is blocked? What should I do?"
         }
-        mock_extract.return_value = {
-            "bank_accounts": [],
-            "upi_ids": [],
-            "phishing_links": [],
-            "phone_numbers": [],
-            "suspicious_keywords": ["verify", "blocked"]
-        }
-        mock_generate.return_value = "Oh dear, my account is blocked? What should I do?"
         
         response = client.post(
             "/api/chat",
@@ -203,15 +195,15 @@ class TestChatEndpointFlow:
         assert data["status"] == "success"
         assert len(data["reply"]) > 0
     
-    @patch('app.api.routes.scam_detector.analyze', new_callable=AsyncMock)
-    def test_non_scam_returns_neutral_response(self, mock_detect):
+    @patch('app.api.routes.optimized_agent.process_message', new_callable=AsyncMock)
+    def test_non_scam_returns_neutral_response(self, mock_process):
         """Non-scam message should get neutral response."""
-        mock_detect.return_value = {
+        mock_process.return_value = {
             "is_scam": False,
             "confidence": 0.2,
             "scam_type": "other",
-            "urgency_level": "low",
-            "key_indicators": []
+            "intel": {},
+            "response": "Tell me more please."
         }
         
         response = client.post(
@@ -231,7 +223,7 @@ class TestChatEndpointFlow:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
-        assert "tell me more" in data["reply"].lower() or "can you" in data["reply"].lower()
+        assert "tell me more" in data["reply"].lower() or "please" in data["reply"].lower()
 
 
 class TestMetricsEndpoint:

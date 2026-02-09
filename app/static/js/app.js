@@ -156,15 +156,33 @@ async function sendMessage() {
     }
 
     const data = await response.json();
-    
+
     // Hide typing indicator
     hideTypingIndicator();
 
-    if (data.reply) {
-      addMessage(data.reply, "user");
+    let replyText = data.reply || data.response || "No response received";
+
+    // Robustness check: if reply is a JSON string, parse it
+    if (
+      typeof replyText === "string" &&
+      (replyText.trim().startsWith("{") || replyText.trim().startsWith("["))
+    ) {
+      try {
+        const parsed = JSON.parse(replyText);
+        replyText =
+          parsed.reply ||
+          parsed.response ||
+          (parsed.text ? parsed.text : replyText);
+      } catch (e) {
+        console.warn("Reply looked like JSON but failed to parse", e);
+      }
+    }
+
+    if (replyText) {
+      addMessage(replyText, "user");
       conversationHistory.push({
         sender: "user",
-        text: data.reply,
+        text: replyText,
         timestamp: Date.now(),
       });
     }
@@ -174,7 +192,7 @@ async function sendMessage() {
     try {
       const intelRes = await fetch(
         `${getApiUrl()}/api/intelligence?sessionId=${encodeURIComponent(sessionId)}`,
-        { headers: getApiKey() ? { "x-api-key": getApiKey() } : {} }
+        { headers: getApiKey() ? { "x-api-key": getApiKey() } : {} },
       );
       if (intelRes.ok) {
         const intelData = await intelRes.json();

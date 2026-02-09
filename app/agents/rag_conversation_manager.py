@@ -4,6 +4,7 @@ Extends EnhancedConversationManager with RAG capabilities for continuous learnin
 """
 
 import logging
+import time
 from typing import Dict, List, Optional
 
 from app.agents.enhanced_conversation import EnhancedConversationManager
@@ -97,12 +98,15 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         try:
             # 1. Retrieve effective response patterns
             stage = self._determine_stage(message_number)
+            rag_t1 = time.time()
             patterns = await self._retriever.retrieve_response_patterns(
                 scammer_message=scammer_message,
                 persona=persona_name,
                 conversation_stage=stage,
                 limit=3
             )
+            rag_t2 = time.time()
+            logger.debug(f"RAG patterns retrieval: {rag_t2-rag_t1:.3f}s ({len(patterns)} results)")
             if patterns:
                 formatted = self._retriever.format_retrieval_context(patterns, "responses")
                 context_parts.append(formatted)
@@ -112,6 +116,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
                 missing_intel = self._identify_missing_intelligence(
                     session.get("intelligence", {})
                 )
+                rag_t3 = time.time()
                 for intel_type in missing_intel[:1]:  # Top priority only
                     tactics = await self._retriever.retrieve_extraction_tactics(
                         scam_type=scam_type,
@@ -122,15 +127,20 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
                     if tactics:
                         formatted = self._retriever.format_retrieval_context(tactics, "tactics")
                         context_parts.append(formatted)
+                rag_t4 = time.time()
+                logger.debug(f"RAG tactics retrieval: {rag_t4-rag_t3:.3f}s")
             
             # 3. Retrieve persona consistency examples (after message 4)
             if message_number >= 4:
                 history = session.get("conversation_history", [])
+                rag_t5 = time.time()
                 examples = await self._retriever.retrieve_persona_examples(
                     persona=persona_name,
                     recent_messages=history[-5:],
                     limit=2
                 )
+                rag_t6 = time.time()
+                logger.debug(f"RAG persona retrieval: {rag_t6-rag_t5:.3f}s ({len(examples)} results)")
                 if examples:
                     formatted = self._retriever.format_retrieval_context(examples, "persona")
                     context_parts.append(formatted)

@@ -103,11 +103,15 @@ async def chat_endpoint(
         metrics["total_messages"] += 1
         
         # 3. SINGLE LLM CALL: Detection + Extraction + Response
+        import time
+        rag_start = time.time()
         result = await optimized_agent.process_message(
             scammer_message=request.message.text,
             session=session,
             metadata=request.metadata.model_dump() if request.metadata else None
         )
+        rag_duration = time.time() - rag_start
+        logger.info(f"Agent processing completed in {rag_duration:.2f}s (session: {request.sessionId})")
         
         # 4. Update session with results
         if result["is_scam"] and result["confidence"] >= settings.SCAM_DETECTION_THRESHOLD:
@@ -147,12 +151,20 @@ async def chat_endpoint(
         
         reply = result.get("response", "I don't understand. Can you explain?")
         
-        # 4b. Human-like typing delay (so reply doesn't appear instantly)
-        # ~60–100 ms per character, min 2s, max 12s, with small random variance
+        # Ensure reply is a string (in case optimized_agent returned a dict for some reason)
+        if isinstance(reply, dict):
+            reply = reply.get("response", str(reply))
+        elif not isinstance(reply, str):
+            reply = str(reply)
+            
+        # 4b. Human-like typing delay
+        typing_start = time.time()
         base_sec = len(reply) * 0.08
         delay_sec = min(max(base_sec, 2.0), 12.0) + random.uniform(-0.3, 0.5)
         delay_sec = max(1.5, delay_sec)
         await asyncio.sleep(delay_sec)
+        typing_duration = time.time() - typing_start
+        logger.info(f"Typing delay applied: {delay_sec:.2f}s (actual: {typing_duration:.2f}s)")
         
         # 5. Update session with our response
         session["conversation_history"].append({
@@ -201,7 +213,9 @@ async def chat_endpoint(
                     except Exception as rag_err:
                         logger.debug(f"RAG storage failed: {rag_err}")
         
-        return ChatResponse(status="success", reply=reply, response=reply)
+        # Ensure result fields are clean strings
+        final_reply = str(reply)
+        return ChatResponse(status="success", reply=final_reply, response=final_reply)
         
     except Exception as e:
         logger.error(f"Error: {str(e)}", exc_info=True)
