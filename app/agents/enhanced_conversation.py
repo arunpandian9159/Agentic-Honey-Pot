@@ -326,6 +326,20 @@ RESPONSE RULES:
         result.setdefault("intel", {})
         result.setdefault("response", "I don't understand. Can you explain?")
 
+        # If response is a JSON string, extract only the text response
+        resp = result["response"]
+        if isinstance(resp, str):
+            stripped = resp.strip()
+            if stripped.startswith("{") or stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, dict):
+                        result["response"] = parsed.get("response", parsed.get("reply", str(parsed)))
+                except (json.JSONDecodeError, ValueError):
+                    pass
+        elif isinstance(resp, dict):
+            result["response"] = resp.get("response", resp.get("reply", str(resp)))
+
         intel = result["intel"]
         intel.setdefault("bank_accounts", [])
         intel.setdefault("upi_ids", [])

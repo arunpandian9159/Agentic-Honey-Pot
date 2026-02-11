@@ -167,6 +167,20 @@ RESPONSE RULES:
         result.setdefault("intel", {})
         result.setdefault("response", "I don't understand. Can you explain?")
 
+        # If response is a JSON string, extract only the text response
+        resp = result["response"]
+        if isinstance(resp, str):
+            stripped = resp.strip()
+            if stripped.startswith("{") or stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, dict):
+                        result["response"] = parsed.get("response", parsed.get("reply", str(parsed)))
+                except (json.JSONDecodeError, ValueError):
+                    pass
+        elif isinstance(resp, dict):
+            result["response"] = resp.get("response", resp.get("reply", str(resp)))
+
         # Replace truncated or fragment-like response with fallback
         if not _is_valid_response(result["response"]):
             result["response"] = self.variation_engine.get_fallback_response(

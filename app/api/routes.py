@@ -6,6 +6,7 @@ Rate Limits: RPM-30, RPD-1K, TPM-12K, TPD-100K
 """
 
 import asyncio
+import json
 import logging
 import random
 import time
@@ -80,9 +81,9 @@ async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str
 
 def _calculate_typing_delay(reply_length: int) -> float:
     """Calculate human-like typing delay based on reply length."""
-    base_sec = reply_length * 0.08
-    delay_sec = min(max(base_sec, 2.0), 12.0) + random.uniform(-0.3, 0.5)
-    return max(1.5, delay_sec)
+    base_sec = reply_length * 0.04
+    delay_sec = min(max(base_sec, 1.5), 5.0) + random.uniform(-0.3, 0.5)
+    return max(1.0, delay_sec)
 
 
 def _merge_intelligence(session: Dict, new_intel: Dict) -> bool:
@@ -172,10 +173,21 @@ async def chat_endpoint(
 
         reply = result.get("response", "I don't understand. Can you explain?")
 
-        # Ensure reply is a string
+        # Ensure reply is a clean string (not raw JSON)
         if isinstance(reply, dict):
-            reply = reply.get("response", str(reply))
-        elif not isinstance(reply, str):
+            reply = reply.get("response", reply.get("reply", str(reply)))
+        elif isinstance(reply, str):
+            stripped = reply.strip()
+            if stripped.startswith("{") or stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, dict):
+                        reply = parsed.get("response", parsed.get("reply", str(parsed)))
+                    else:
+                        reply = str(parsed)
+                except (json.JSONDecodeError, ValueError):
+                    pass  # Keep the original string if it's not valid JSON
+        if not isinstance(reply, str):
             reply = str(reply)
 
         # 4b. Human-like typing delay
