@@ -33,7 +33,7 @@ def get_qdrant_client():
         _qdrant_client = QdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
-            timeout=5
+            timeout=3
         )
         logger.info("✓ Connected to Qdrant Cloud")
         return _qdrant_client

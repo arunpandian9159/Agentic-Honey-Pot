@@ -85,7 +85,11 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         scammer_message: str,
         session: Dict
     ) -> str:
-        """Build RAG context from retrieved examples."""
+        """Build RAG context from retrieved examples.
+        
+        Runs all RAG queries concurrently and applies an overall timeout
+        to prevent blocking the API response.
+        """
         if not self._retriever:
             return ""
         
@@ -93,60 +97,98 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         scam_type = session.get("scam_type") or "unknown"
         message_number = session.get("message_count", 0) + 1
         
+        try:
+            import asyncio
+            return await asyncio.wait_for(
+                self._fetch_rag_context(
+                    scammer_message, persona_name, scam_type, message_number, session
+                ),
+                timeout=8.0  # Hard cap to avoid blocking the API
+            )
+        except asyncio.TimeoutError:
+            logger.warning("RAG context timed out after 8s, skipping")
+            return ""
+        except Exception as e:
+            logger.debug(f"RAG context error: {e}")
+            return ""
+
+    async def _fetch_rag_context(
+        self,
+        scammer_message: str,
+        persona_name: str,
+        scam_type: str,
+        message_number: int,
+        session: Dict
+    ) -> str:
+        """Fetch all RAG context concurrently."""
+        import asyncio
+        
+        stage = self._determine_stage(message_number)
         context_parts = []
         
-        try:
-            # 1. Retrieve effective response patterns
-            stage = self._determine_stage(message_number)
-            rag_t1 = time.time()
-            patterns = await self._retriever.retrieve_response_patterns(
-                scammer_message=scammer_message,
-                persona=persona_name,
-                conversation_stage=stage,
-                limit=3
+        # Build list of concurrent tasks
+        tasks = {}
+        
+        # 1. Always retrieve response patterns
+        tasks["patterns"] = self._retriever.retrieve_response_patterns(
+            scammer_message=scammer_message,
+            persona=persona_name,
+            conversation_stage=stage,
+            limit=3
+        )
+        
+        # 2. Retrieve extraction tactics (if in extraction phase)
+        if message_number >= 6:
+            missing_intel = self._identify_missing_intelligence(
+                session.get("intelligence", {})
             )
-            rag_t2 = time.time()
-            logger.debug(f"RAG patterns retrieval: {rag_t2-rag_t1:.3f}s ({len(patterns)} results)")
-            if patterns:
-                formatted = self._retriever.format_retrieval_context(patterns, "responses")
-                context_parts.append(formatted)
-            
-            # 2. Retrieve extraction tactics (if in extraction phase)
-            if message_number >= 6:
-                missing_intel = self._identify_missing_intelligence(
-                    session.get("intelligence", {})
-                )
-                rag_t3 = time.time()
-                for intel_type in missing_intel[:1]:  # Top priority only
-                    tactics = await self._retriever.retrieve_extraction_tactics(
-                        scam_type=scam_type,
-                        persona=persona_name,
-                        target_intel_type=intel_type,
-                        limit=2
-                    )
-                    if tactics:
-                        formatted = self._retriever.format_retrieval_context(tactics, "tactics")
-                        context_parts.append(formatted)
-                rag_t4 = time.time()
-                logger.debug(f"RAG tactics retrieval: {rag_t4-rag_t3:.3f}s")
-            
-            # 3. Retrieve persona consistency examples (after message 4)
-            if message_number >= 4:
-                history = session.get("conversation_history", [])
-                rag_t5 = time.time()
-                examples = await self._retriever.retrieve_persona_examples(
+            if missing_intel:
+                tasks["tactics"] = self._retriever.retrieve_extraction_tactics(
+                    scam_type=scam_type,
                     persona=persona_name,
-                    recent_messages=history[-5:],
+                    target_intel_type=missing_intel[0],
                     limit=2
                 )
-                rag_t6 = time.time()
-                logger.debug(f"RAG persona retrieval: {rag_t6-rag_t5:.3f}s ({len(examples)} results)")
-                if examples:
-                    formatted = self._retriever.format_retrieval_context(examples, "persona")
-                    context_parts.append(formatted)
         
-        except Exception as e:
-            logger.debug(f"RAG retrieval error: {e}")
+        # 3. Retrieve persona examples (after message 4)
+        if message_number >= 4:
+            history = session.get("conversation_history", [])
+            tasks["persona"] = self._retriever.retrieve_persona_examples(
+                persona=persona_name,
+                recent_messages=history[-5:],
+                limit=2
+            )
+        
+        # Run all queries concurrently
+        rag_start = time.time()
+        keys = list(tasks.keys())
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        rag_duration = time.time() - rag_start
+        logger.debug(f"RAG concurrent retrieval: {rag_duration:.3f}s ({len(keys)} queries)")
+        
+        # Process results
+        result_map = dict(zip(keys, results))
+        
+        if "patterns" in result_map and not isinstance(result_map["patterns"], Exception):
+            patterns = result_map["patterns"]
+            if patterns:
+                context_parts.append(
+                    self._retriever.format_retrieval_context(patterns, "responses")
+                )
+        
+        if "tactics" in result_map and not isinstance(result_map["tactics"], Exception):
+            tactics = result_map["tactics"]
+            if tactics:
+                context_parts.append(
+                    self._retriever.format_retrieval_context(tactics, "tactics")
+                )
+        
+        if "persona" in result_map and not isinstance(result_map["persona"], Exception):
+            examples = result_map["persona"]
+            if examples:
+                context_parts.append(
+                    self._retriever.format_retrieval_context(examples, "persona")
+                )
         
         if not context_parts:
             return ""
