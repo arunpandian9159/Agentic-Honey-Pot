@@ -14,6 +14,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
@@ -23,7 +27,9 @@
     <div class="container">
       <header>
         <div class="logo-container">
-          <div class="logo-icon">🍯</div>
+          <div class="logo-icon">
+            <i class="fa-solid fa-bug" style="color: #f59e0b"></i>
+          </div>
           <h1>AI Honeypot API</h1>
         </div>
         <p class="subtitle">
@@ -56,11 +62,15 @@
         <!-- Chat Panel -->
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title">💬 Chat Simulation</div>
+            <div class="panel-title">
+              <i class="fa-solid fa-comments" style="color: #3b82f6"></i> Chat
+              Simulation
+            </div>
             <div class="session-info">
               <span class="session-id" id="sessionIdDisplay">-</span>
               <button class="btn btn-sm btn-danger" onclick="resetSession()">
-                🔄 New Session
+                <i class="fa-solid fa-rotate" style="color: #406beb"></i> New
+                Session
               </button>
             </div>
           </div>
@@ -71,12 +81,14 @@
               id="newMessageIndicator"
               onclick="scrollToBottom()"
             >
-              ⬇ New message
+              <i class="fa-solid fa-arrow-down"></i> New message
             </div>
 
             <div class="chat-messages" id="chatMessages">
               <div class="message-wrapper system">
-                <div class="message-avatar system">📢</div>
+                <div class="message-avatar system">
+                  <i class="fa-solid fa-bullhorn" style="color: #8b5cf6"></i>
+                </div>
                 <div class="message system">
                   <div class="message-text">
                     Start a new conversation. Enter a scam message to test the
@@ -88,7 +100,9 @@
 
             <!-- Typing Indicator -->
             <div class="typing-indicator" id="typingIndicator">
-              <div class="typing-avatar">🤖</div>
+              <div class="typing-avatar">
+                <i class="fa-solid fa-robot" style="color: #ffffff"></i>
+              </div>
               <div class="typing-dots">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -97,6 +111,75 @@
             </div>
 
             <div class="chat-input-container">
+              <div class="quick-actions">
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('lottery')"
+                >
+                  <i class="fa-solid fa-ticket" style="color: #f59e0b"></i>
+                  Lottery Scam
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('bank')">
+                  <i
+                    class="fa-solid fa-building-columns"
+                    style="color: #3b82f6"
+                  ></i>
+                  Bank Fraud
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('job')">
+                  <i class="fa-solid fa-briefcase" style="color: #6366f1"></i>
+                  Job Scam
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('kyc')">
+                  <i
+                    class="fa-solid fa-clipboard-check"
+                    style="color: #10b981"
+                  ></i>
+                  KYC Scam
+                </button>
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('delivery')"
+                >
+                  <i class="fa-solid fa-truck" style="color: #f97316"></i>
+                  Delivery Scam
+                </button>
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('investment')"
+                >
+                  <i class="fa-solid fa-chart-line" style="color: #eab308"></i>
+                  Investment Fraud
+                </button>
+                <button class="quick-btn" onclick="insertQuickMessage('otp')">
+                  <i class="fa-solid fa-lock" style="color: #ef4444"></i> OTP
+                  Scam
+                </button>
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('customs')"
+                >
+                  <i class="fa-solid fa-box" style="color: #8b5cf6"></i> Customs
+                  Scam
+                </button>
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('insurance')"
+                >
+                  <i
+                    class="fa-solid fa-shield-halved"
+                    style="color: #06b6d4"
+                  ></i>
+                  Insurance Fraud
+                </button>
+                <button
+                  class="quick-btn"
+                  onclick="insertQuickMessage('techsupport')"
+                >
+                  <i class="fa-solid fa-headset" style="color: #64748b"></i>
+                  Tech Support
+                </button>
+              </div>
               <div class="input-wrapper">
                 <div class="input-row">
                   <textarea
@@ -117,7 +200,12 @@
                     id="sendBtn"
                     title="Send message"
                   >
-                    <span class="send-icon" id="sendIcon">➤</span>
+                    <span class="send-icon" id="sendIcon"
+                      ><i
+                        class="fa-solid fa-paper-plane"
+                        style="color: #000000"
+                      ></i
+                    ></span>
                     <div
                       class="loading"
                       id="sendLoading"
@@ -125,23 +213,6 @@
                     ></div>
                   </button>
                 </div>
-              </div>
-              <div class="quick-actions">
-                <button
-                  class="quick-btn"
-                  onclick="insertQuickMessage('lottery')"
-                >
-                  🎰 Lottery Scam
-                </button>
-                <button class="quick-btn" onclick="insertQuickMessage('bank')">
-                  🏦 Bank Fraud
-                </button>
-                <button class="quick-btn" onclick="insertQuickMessage('job')">
-                  💼 Job Scam
-                </button>
-                <button class="quick-btn" onclick="insertQuickMessage('kyc')">
-                  📋 KYC Scam
-                </button>
               </div>
             </div>
           </div>
@@ -152,7 +223,10 @@
           <!-- Configuration -->
           <div class="panel" style="margin-bottom: 1.5rem">
             <div class="panel-header">
-              <div class="panel-title">⚙️ Configuration</div>
+              <div class="panel-title">
+                <i class="fa-solid fa-gear" style="color: #6b7280"></i>
+                Configuration
+              </div>
             </div>
             <div class="panel-body">
               <div class="config-section hidden">
@@ -182,7 +256,11 @@
                 onclick="checkHealth()"
                 style="width: 100%; margin-top: 0.5rem"
               >
-                🔍 Test Connection
+                <i
+                  class="fa-solid fa-magnifying-glass"
+                  style="color: #10b981"
+                ></i>
+                Test Connection
               </button>
             </div>
           </div>
@@ -195,7 +273,13 @@
           >
             <div class="panel-body">
               <div class="scam-alert">
-                <div class="scam-alert-header">⚠️ SCAM DETECTED</div>
+                <div class="scam-alert-header">
+                  <i
+                    class="fa-solid fa-triangle-exclamation"
+                    style="color: #fdcf04"
+                  ></i>
+                  SCAM DETECTED
+                </div>
                 <div class="scam-details">
                   <span
                     ><strong>Type:</strong> <span id="scamType">-</span></span
@@ -223,12 +307,19 @@
           <!-- Intelligence Panel -->
           <div class="panel">
             <div class="panel-header">
-              <div class="panel-title">🔍 Extracted Intelligence</div>
+              <div class="panel-title">
+                <i
+                  class="fa-solid fa-magnifying-glass-chart"
+                  style="color: #8b5cf6"
+                ></i>
+                Extracted Intelligence
+              </div>
             </div>
             <div class="panel-body" id="intelligencePanel">
               <div class="intel-section">
                 <div class="intel-header">
-                  💳 Bank Accounts
+                  <i class="fa-solid fa-credit-card" style="color: #3b82f6"></i>
+                  Bank Accounts
                   <span class="intel-badge" id="bankCount">0</span>
                 </div>
                 <div class="intel-items" id="bankAccounts">
@@ -237,7 +328,11 @@
               </div>
               <div class="intel-section">
                 <div class="intel-header">
-                  📱 UPI IDs
+                  <i
+                    class="fa-solid fa-mobile-screen"
+                    style="color: #10b981"
+                  ></i>
+                  UPI IDs
                   <span class="intel-badge" id="upiCount">0</span>
                 </div>
                 <div class="intel-items" id="upiIds">
@@ -246,7 +341,8 @@
               </div>
               <div class="intel-section">
                 <div class="intel-header">
-                  📞 Phone Numbers
+                  <i class="fa-solid fa-phone" style="color: #f59e0b"></i> Phone
+                  Numbers
                   <span class="intel-badge" id="phoneCount">0</span>
                 </div>
                 <div class="intel-items" id="phoneNumbers">
@@ -255,7 +351,8 @@
               </div>
               <div class="intel-section">
                 <div class="intel-header">
-                  🔗 Phishing Links
+                  <i class="fa-solid fa-link" style="color: #ef4444"></i>
+                  Phishing Links
                   <span class="intel-badge" id="linkCount">0</span>
                 </div>
                 <div class="intel-items" id="phishingLinks">

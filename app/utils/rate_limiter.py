@@ -38,12 +38,6 @@ class RateLimiter:
     _minute_tokens: deque = field(default_factory=deque)
     _day_tokens: deque = field(default_factory=deque)
     
-    def __post_init__(self):
-        self._minute_requests = deque()
-        self._day_requests = deque()
-        self._minute_tokens = deque()
-        self._day_tokens = deque()
-    
     def _cleanup_old_entries(self):
         """Remove expired entries from tracking queues."""
         now = time.time()

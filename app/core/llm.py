@@ -33,7 +33,7 @@ class GroqClient:
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 150,  # Reduced from 500 to save tokens
+        max_tokens: Optional[int] = None,
         response_format: Optional[str] = None
     ) -> str:
         """
@@ -42,12 +42,14 @@ class GroqClient:
         Args:
             prompt: The prompt to send to the LLM
             temperature: Sampling temperature (0.0-1.0)
-            max_tokens: Maximum tokens in response (reduced to 150 for efficiency)
+            max_tokens: Maximum tokens in response (defaults to settings value)
             response_format: Optional format ("json" for JSON mode)
         
         Returns:
             Generated text response
         """
+        if max_tokens is None:
+            max_tokens = settings.MAX_TOKENS_GENERATION
         try:
             # Estimate tokens (rough: 1 token ≈ 4 chars)
             estimated_tokens = len(prompt) // 4 + max_tokens
@@ -85,10 +87,9 @@ class GroqClient:
             # Log usage stats
             usage = rate_limiter.get_current_usage()
             logger.info(
-                f"Request #{self.request_count}: {tokens_used} tokens | "
-                f"RPM: {usage['requests_this_minute']}/30 | "
-                f"RPD: {usage['requests_today']}/1000 | "
-                f"TPM: {usage['tokens_this_minute']}/12000"
+                f"LLM #{self.request_count}: {tokens_used}tokens "
+                f"RPM={usage['requests_this_minute']}/30 RPD={usage['requests_today']}/1K "
+                f"TPM={usage['tokens_this_minute']}/12K"
             )
             
             return content.strip()
@@ -101,7 +102,7 @@ class GroqClient:
         self,
         prompt: str,
         temperature: float = 0.1,
-        max_tokens: int = 200  # Reduced for JSON responses
+        max_tokens: Optional[int] = None
     ) -> str:
         """
         Generate a JSON response specifically.
@@ -110,11 +111,13 @@ class GroqClient:
         Args:
             prompt: The prompt expecting JSON output
             temperature: Sampling temperature (default 0.1 for consistency)
-            max_tokens: Maximum tokens (reduced to 200 for JSON)
+            max_tokens: Maximum tokens (defaults to settings value)
         
         Returns:
             JSON string response
         """
+        if max_tokens is None:
+            max_tokens = settings.MAX_TOKENS_JSON
         return await self.generate(
             prompt=prompt,
             temperature=temperature,

@@ -100,12 +100,10 @@ Examples:
         phone_pattern = r'(?:\+91[\s\-]?)?[6-9]\d{9}'
         phones = re.findall(phone_pattern, message)
         clean_phones = [
-            re.sub(r'[\s\-\+]', '', p).replace('91', '', 1) if p.startswith('+91') or p.startswith('91') 
-            else re.sub(r'[\s\-]', '', p)
+            re.sub(r'[\s\-\+]', '', p)[-10:]
             for p in phones
+            if len(re.sub(r'[\s\-\+]', '', p)) >= 10
         ]
-        # Keep only 10-digit numbers
-        clean_phones = [p[-10:] for p in clean_phones if len(p) >= 10]
         llm_result["phone_numbers"].extend(clean_phones)
         
         # UPI ID pattern

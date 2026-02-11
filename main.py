@@ -10,7 +10,7 @@ import os
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -34,29 +34,23 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
     Handles startup and shutdown events.
+    RAG is initialized lazily on first request.
     """
     # Startup
-    logger.info("=" * 50)
-    logger.info("AI Honeypot API Starting...")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"Debug Mode: {settings.DEBUG}")
-    logger.info(f"Log Level: {settings.LOG_LEVEL}")
+    logger.info("─" * 50)
+    logger.info("🚀 AI Honeypot API Starting")
+    logger.info(f"  env={settings.ENVIRONMENT}  debug={settings.DEBUG}  log={settings.LOG_LEVEL}")
     
     # Validate required settings
+    groq_ok = "✓" if settings.GROQ_API_KEY else "✗"
+    key_ok  = "✓" if settings.API_SECRET_KEY else "✗"
     if not settings.GROQ_API_KEY:
-        logger.warning("⚠️ GROQ_API_KEY not set! LLM features will fail.")
-    else:
-        logger.info("✓ GROQ_API_KEY configured")
-    
+        logger.warning("GROQ_API_KEY not set — LLM features will fail")
     if not settings.API_SECRET_KEY:
-        logger.warning("⚠️ API_SECRET_KEY not set! API authentication disabled.")
-    else:
-        logger.info("✓ API_SECRET_KEY configured")
-    
-    logger.info(f"✓ Callback URL: {settings.GUVI_CALLBACK_URL}")
-    logger.info("=" * 50)
-    logger.info("🚀 AI Honeypot API Ready!")
-    logger.info("Frontend is in http://localhost:8000/")
+        logger.warning("API_SECRET_KEY not set — auth disabled")
+    logger.info(f"  groq={groq_ok}  api_key={key_ok}  callback={settings.GUVI_CALLBACK_URL}")
+    logger.info("─" * 50)
+    logger.info("✅ Ready — http://localhost:8000/")
     
     yield
     
@@ -87,6 +81,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Lazy RAG initialization middleware
+@app.middleware("http")
+async def init_rag_on_first_request(request: Request, call_next):
+    """Lazy initialize RAG on first request to reduce startup time."""
+    if not hasattr(app.state, 'rag_initialized'):
+        from app.core.rag_config import is_rag_enabled, initialize_collections
+        if is_rag_enabled():
+            if initialize_collections():
+                logger.info("✓ RAG initialized (lazy)")
+            else:
+                logger.warning("RAG init failed — continuing without RAG")
+        else:
+            logger.info("RAG disabled (QDRANT credentials not set)")
+        app.state.rag_initialized = True
+    return await call_next(request)
+
 
 # Include API routes
 app.include_router(router)

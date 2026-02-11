@@ -1093,10 +1093,8 @@ h1 {
   }
 
   .quick-actions {
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
     gap: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.5rem;
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
@@ -1162,9 +1160,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  padding-bottom: 1rem;
 }
 
 .quick-btn {

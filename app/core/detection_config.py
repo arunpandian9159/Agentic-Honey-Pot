@@ -38,7 +38,7 @@ DETECTION_CONFIG = {
     "red_flag_threshold": 0.6,  # Score above this triggers red flag
     
     # LLM override settings
-    "llm_high_confidence_threshold": 0.90,  # Trust LLM if this confident
+    "llm_high_confidence_threshold": 0.80,  # Trust LLM if this confident
 }
 
 
