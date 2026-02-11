@@ -36,6 +36,21 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _extract_text_from_response(text: str) -> str:
+    """Extract plain text response from a string that might be JSON."""
+    if not isinstance(text, str):
+        return str(text)
+    stripped = text.strip()
+    if stripped.startswith("{") or stripped.startswith("["):
+        try:
+            parsed = json.loads(stripped)
+            if isinstance(parsed, dict):
+                return str(parsed.get("response", parsed.get("reply", stripped)))
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return text
+
+
 class ConversationMemory:
     """Track recent responses to avoid repetition."""
 
@@ -205,6 +220,7 @@ class EnhancedConversationManager:
             result = self._normalize_result(result, persona_name, scammer_message)
 
             raw_response = result.get("response", "").strip().strip('"').strip("'")
+            raw_response = _extract_text_from_response(raw_response)
             logger.info(f"Raw LLM output: '{raw_response}'")
 
             # Validate and regenerate if needed
@@ -433,7 +449,7 @@ RESPONSE RULES:
 
         try:
             txt = await self.llm.generate(prompt=prompt, temperature=0.5, max_tokens=settings.MAX_TOKENS_GENERATION)
-            return txt.strip()
+            return _extract_text_from_response(txt.strip())
         except Exception:
             return _get_contextual_fallback(persona, scammer_message, msg_count)
 
@@ -450,7 +466,7 @@ RESPONSE RULES:
 
         try:
             txt = await self.llm.generate(prompt=prompt, temperature=0.6, max_tokens=settings.MAX_TOKENS_GENERATION)
-            return txt.strip()
+            return _extract_text_from_response(txt.strip())
         except Exception:
             return _get_contextual_fallback(persona, scammer_message, msg_count)
 

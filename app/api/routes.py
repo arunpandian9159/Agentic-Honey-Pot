@@ -190,10 +190,11 @@ async def chat_endpoint(
         if not isinstance(reply, str):
             reply = str(reply)
 
-        # 4b. Human-like typing delay
-        delay_sec = _calculate_typing_delay(len(reply))
-        await asyncio.sleep(delay_sec)
-        logger.info(f"Typing delay applied: {delay_sec:.2f}s")
+        #TODO: Add typing delay
+        # 4b. Human-like typing delay (disabled to prevent timeout on external API testers)
+        # delay_sec = _calculate_typing_delay(len(reply))
+        # await asyncio.sleep(delay_sec)
+        # logger.info(f"Typing delay applied: {delay_sec:.2f}s")
 
         # 5. Update session with our response
         session["conversation_history"].append({
