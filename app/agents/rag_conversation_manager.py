@@ -134,7 +134,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
             scammer_message=scammer_message,
             persona=persona_name,
             conversation_stage=stage,
-            limit=3
+            limit=1
         )
         
         # 2. Retrieve extraction tactics (if in extraction phase)
@@ -147,7 +147,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
                     scam_type=scam_type,
                     persona=persona_name,
                     target_intel_type=missing_intel[0],
-                    limit=2
+                    limit=1
                 )
         
         # 3. Retrieve persona examples (after message 4)
@@ -156,7 +156,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
             tasks["persona"] = self._retriever.retrieve_persona_examples(
                 persona=persona_name,
                 recent_messages=history[-5:],
-                limit=2
+                limit=1
             )
         
         # Run all queries concurrently

@@ -299,19 +299,13 @@ class EnhancedConversationManager:
         history = session.get("conversation_history", [])[-3:]
         history_text = _format_history(history) if history else "[First message]"
 
-        return f"""PERSONA INSTRUCTIONS:
-{system_prompt[:500]}
-
+        return f"""PERSONA: {system_prompt[:400]}
 {context_hint}
-
-EMOTIONAL CONTEXT:
-{emotion_context[:300]}
-
+EMOTION: {emotion_context[:100]}
 ---
-SCAMMER MESSAGE: "{scammer_message}"
-RECENT HISTORY: {history_text}
-MESSAGE NUMBER: {message_number}
-STAGE TACTIC: {stage_guidance}
+SCAMMER: "{scammer_message}"
+HISTORY: {history_text}
+MSG#: {message_number} | STAGE: {stage_guidance}
 
 OUTPUT FORMAT - Respond with ONLY valid JSON:
 {{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"suspicious_keywords":[]}},"response":"victim reply 1-2 sentences"}}

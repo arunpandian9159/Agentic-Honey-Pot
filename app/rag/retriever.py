@@ -270,12 +270,12 @@ class RAGRetriever:
         
         for i, conv in enumerate(conversations, 1):
             formatted.append(f"\nExample {i} (Score: {conv.get('intelligence_score', 0)}):")
-            full_conv = conv.get('full_conversation', '')[:300]
+            full_conv = conv.get('full_conversation', '')[:150]
             formatted.append(full_conv + "...")
             
             tactics = conv.get('successful_tactics', [])
             if tactics:
-                formatted.append(f"What worked: {', '.join(tactics[:3])}")
+                formatted.append(f"Worked: {', '.join(tactics[:2])}")
         
         return "\n".join(formatted)
     
@@ -309,9 +309,7 @@ class RAGRetriever:
         formatted = ["PERSONA-CONSISTENT EXAMPLES:\n"]
         
         for i, ex in enumerate(examples, 1):
-            victim_responses = ex.get('victim_responses', [])[:3]
-            formatted.append(f"\n{i}. Example responses:")
-            for resp in victim_responses:
-                formatted.append(f'   - "{resp}"')
+            victim_responses = ex.get('victim_responses', [])[:1]
+            formatted.append(f"\n{i}. Example response: {victim_responses[0] if victim_responses else ''}")
         
         return "\n".join(formatted)
