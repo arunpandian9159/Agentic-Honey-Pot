@@ -87,10 +87,9 @@ class GroqClient:
             # Log usage stats
             usage = rate_limiter.get_current_usage()
             logger.info(
-                f"Request #{self.request_count}: {tokens_used} tokens | "
-                f"RPM: {usage['requests_this_minute']}/30 | "
-                f"RPD: {usage['requests_today']}/1000 | "
-                f"TPM: {usage['tokens_this_minute']}/12000"
+                f"LLM #{self.request_count}: {tokens_used}tokens "
+                f"RPM={usage['requests_this_minute']}/30 RPD={usage['requests_today']}/1K "
+                f"TPM={usage['tokens_this_minute']}/12K"
             )
             
             return content.strip()

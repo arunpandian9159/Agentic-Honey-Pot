@@ -130,11 +130,8 @@ class ScammerProfiler:
         }
 
         logger.info(
-            f"Scammer profile: aggression={profile['aggression_level']}, "
-            f"patience={profile['patience_score']}, "
-            f"sophistication={profile['sophistication']}, "
-            f"manipulation={profile['emotional_manipulation']}, "
-            f"tactic={tactic}"
+            f"Profile: aggr={profile['aggression_level']} pat={profile['patience_score']} "
+            f"soph={profile['sophistication']} manip={profile['emotional_manipulation']} → {tactic}"
         )
         return profile
 

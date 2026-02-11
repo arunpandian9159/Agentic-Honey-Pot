@@ -225,7 +225,7 @@ class EnhancedConversationManager:
 
             raw_response = result.get("response", "").strip().strip('"').strip("'")
             raw_response = _extract_text_from_response(raw_response)
-            logger.info(f"Raw LLM output: '{raw_response}'")
+            logger.info(f"LLM → '{raw_response[:80]}{'…' if len(raw_response) > 80 else ''}'")
 
             # Validate and regenerate if needed
             if not self._validate_response_quality(raw_response, persona_name):
@@ -274,10 +274,9 @@ class EnhancedConversationManager:
                 result["confidence"] = max(result.get("confidence", 0), session.get("scam_confidence", 0.7))
                 result["persona"] = persona_name
 
-            logger.info(f"Final humanized response: '{humanized}'")
+            logger.info(f"Reply → '{humanized[:80]}{'…' if len(humanized) > 80 else ''}'")
             logger.info(
-                f"Enhanced result: scam={result['is_scam']}, "
-                f"type={result['scam_type']}, persona={persona_name}, msg#{msg_count}"
+                f"Result: scam={result['is_scam']} type={result['scam_type']} persona={persona_name} msg#{msg_count}"
             )
             return result
 

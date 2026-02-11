@@ -130,7 +130,7 @@ async def chat_endpoint(
     Uses single LLM call for detection + extraction + response.
     """
     try:
-        logger.info(f"Processing session: {request.sessionId}")
+        logger.info(f"── ▶ {request.sessionId} ──")
 
         # 1. Get or create session
         session = session_manager.get_or_create(request.sessionId)
@@ -156,7 +156,7 @@ async def chat_endpoint(
             metadata=request.metadata.model_dump() if request.metadata else None
         )
         rag_duration = time.time() - rag_start
-        logger.info(f"Agent processing completed in {rag_duration:.2f}s (session: {request.sessionId})")
+        logger.info(f"Agent done in {rag_duration:.2f}s")
 
         # 4. Update session with results
         if result["is_scam"] and result["confidence"] >= settings.SCAM_DETECTION_THRESHOLD:
@@ -166,7 +166,7 @@ async def chat_endpoint(
                 session["scam_type"] = result["scam_type"]
                 session["persona"] = result.get("persona", "tech_naive_parent")
                 metrics["scams_detected"] += 1
-                logger.info(f"Scam detected! Type: {result['scam_type']}")
+                logger.info(f"🚨 SCAM type={result['scam_type']} confidence={result['confidence']:.0%}")
 
             got_new = _merge_intelligence(session, result.get("intel", {}))
             _record_tactic_outcome(session, got_new)
@@ -243,7 +243,7 @@ async def _send_callback(session_id: str, session: Dict, intel_score: float):
 
     if callback_success:
         session["callback_sent"] = True
-        logger.info(f"Session {session_id} completed. Callback sent.")
+        logger.info(f"── ✔ {session_id} complete — callback sent ──")
         metrics["total_intelligence"] += sum(
             len(v) for v in session["intelligence"].values()
         )
