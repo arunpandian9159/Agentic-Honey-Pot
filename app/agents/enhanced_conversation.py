@@ -199,6 +199,7 @@ class EnhancedConversationManager:
 
         # Get or select persona
         persona_name = session.get("persona")
+        scam_already_detected = session.get("scam_detected", False)
         if not persona_name:
             scam_type = quick_scam_type(scammer_message)
             persona_name = self._select_enhanced_persona(scam_type)
@@ -262,6 +263,13 @@ class EnhancedConversationManager:
 
             self.conversation_memory.add_response(session_id, humanized)
             result["response"] = humanized
+
+            # Lock detection to session-level values after first detection
+            if scam_already_detected:
+                result["is_scam"] = True
+                result["scam_type"] = session.get("scam_type", result["scam_type"])
+                result["confidence"] = max(result.get("confidence", 0), session.get("scam_confidence", 0.7))
+                result["persona"] = persona_name
 
             logger.info(f"Final humanized response: '{humanized}'")
             logger.info(

@@ -85,6 +85,7 @@ class OptimizedAgent:
 
         # Get persona (use existing or select enhanced persona)
         persona_name = session.get("persona")
+        scam_already_detected = session.get("scam_detected", False)
         if not persona_name:
             scam_type = quick_scam_type(scammer_message)
             persona_name = _select_enhanced_persona(scam_type)
@@ -146,6 +147,13 @@ RESPONSE RULES:
                         persona_name=persona_name,
                         conversation_stage=get_stage_guidance(msg_count)
                     )
+
+            # Lock detection to session-level values after first detection
+            if scam_already_detected:
+                result["is_scam"] = True
+                result["scam_type"] = session.get("scam_type", result["scam_type"])
+                result["confidence"] = max(result.get("confidence", 0), session.get("scam_confidence", 0.7))
+                result["persona"] = persona_name
 
             logger.info(
                 f"Combined result: scam={result['is_scam']}, "
