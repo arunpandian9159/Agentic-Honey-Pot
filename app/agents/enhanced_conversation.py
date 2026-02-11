@@ -20,6 +20,8 @@ from app.agents.response_variation import ResponseVariationEngine
 from app.agents.natural_flow import NaturalConversationFlow, get_stage_guidance
 from app.agents.emotional_intelligence import EmotionalIntelligence
 from app.agents.context_aware import ContextAwareManager, get_concise_context
+from app.agents.scammer_profiler import ScammerProfiler
+from app.agents.extraction_strategies import get_extraction_prompt_hint
 from app.agents.optimized import (
     quick_scam_type,
     SCAM_KEYWORDS,
@@ -187,6 +189,7 @@ class EnhancedConversationManager:
         self.emotion_layer = EmotionalIntelligence()
         self.context_manager = ContextAwareManager()
         self.conversation_memory = ConversationMemory()
+        self.scammer_profiler = ScammerProfiler()
 
     async def process_message(
         self,
@@ -307,9 +310,20 @@ class EnhancedConversationManager:
         history = session.get("conversation_history", [])[-3:]
         history_text = _format_history(history) if history else "[First message]"
 
+        # Scammer psychology profiling
+        profiler_output = self.scammer_profiler.analyze(
+            session.get("conversation_history", [])
+        )
+        psychology_hint = self.scammer_profiler.get_prompt_modifier(profiler_output)
+
+        # Proactive intel extraction hint
+        extraction_hint = get_extraction_prompt_hint(session, profiler_output)
+
         return f"""PERSONA: {system_prompt[:400]}
 {context_hint}
 EMOTION: {emotion_context[:100]}
+{psychology_hint}
+{extraction_hint}
 ---
 SCAMMER: "{scammer_message}"
 HISTORY: {history_text}

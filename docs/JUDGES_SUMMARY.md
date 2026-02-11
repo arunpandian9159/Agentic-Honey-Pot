@@ -67,6 +67,25 @@ Ours: 1 LLM call per message
 
 1. Initial Hook → 2. Engagement → 3. Information Probe → 4. Resistance → 5. Gradual Compliance → 6. Intelligence Mining → 7. Prolongation
 
+### 5. 🧠 Scammer Psychology Profiling (Unique)
+
+Real-time behavioral analysis with **zero additional LLM calls**:
+
+| Metric               | What It Measures                           |
+| -------------------- | ------------------------------------------ |
+| Aggression (0-1)     | Threats, CAPS, urgency language            |
+| Patience (0-1)       | Frustration, repeated demands              |
+| Sophistication (0-1) | Technical vocabulary, formal language      |
+| Manipulation (0-1)   | Fear/guilt/urgency/authority/greed tactics |
+
+**Adaptive tactics**: Impatient scammer → act more confused • Sophisticated scammer → more realistic persona • Frustrated scammer → dangle compliance to extract info
+
+### 6. 🎯 Proactive Intelligence Extraction
+
+- **Intel Gap Analysis**: Identifies missing intelligence types per session
+- **19 extraction tactics** across 4 categories (UPI, bank, link, phone)
+- **Psychology-aware**: Adapts extraction approach based on scammer profile
+
 ---
 
 ## 📊 Metrics Achieved
@@ -139,9 +158,11 @@ Call +91 9876543210 or send ₹1 to 9876543210@paytm
 
 1. **Efficiency**: 1 LLM call vs 3 (others)
 2. **Realism**: Human-like imperfections, no AI patterns
-3. **Extensibility**: Modular architecture with optional RAG
-4. **Complete**: Detection + Engagement + Extraction + Reporting
-5. **Production-Ready**: Rate limiting, error handling, monitoring
+3. **Psychology**: Real-time scammer profiling adapts responses dynamically
+4. **Proactive Extraction**: Intel Gap Analysis actively steers toward missing intelligence
+5. **Extensibility**: Modular architecture with optional RAG
+6. **Complete**: Detection + Engagement + Profiling + Extraction + Reporting
+7. **Production-Ready**: Rate limiting, error handling, monitoring
 
 ---
 

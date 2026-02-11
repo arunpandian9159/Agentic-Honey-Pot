@@ -84,6 +84,33 @@ Real-time extraction using LLM + regex hybrid approach:
 - **Phishing Links** (HTTP/HTTPS URLs)
 - **Suspicious Keywords** (urgency indicators)
 
+### 🧠 Scammer Psychology Profiling
+
+Real-time psychological analysis of scammer behavior to drive adaptive responses:
+
+| Metric                     | Description                                        | Range     |
+| -------------------------- | -------------------------------------------------- | --------- |
+| **Aggression Level**       | Threatening language, CAPS, exclamation marks      | 0.0 - 1.0 |
+| **Patience Score**         | Signs of frustration, repeated messages            | 0.0 - 1.0 |
+| **Sophistication**         | Technical vocabulary, formal language, ref numbers | 0.0 - 1.0 |
+| **Emotional Manipulation** | Fear, urgency, authority, guilt, greed tactics     | 0.0 - 1.0 |
+
+**Adaptive Response Strategies:**
+
+- Impatient scammer → shorter, more confused responses (waste their time)
+- Sophisticated scammer → more realistic persona (avoid detection)
+- Frustrated scammer → strategic "almost compliance" (extract more info)
+- Manipulative scammer → feigned compliance while requesting their details
+
+### 🎯 Proactive Intelligence Extraction
+
+Intel Gap Analysis system that actively steers conversations to extract missing intelligence:
+
+- **Gap Detection**: Identifies which intel types (UPI, bank account, phone, link) haven't been collected yet
+- **Prioritized Extraction**: Focuses on highest-value missing intel first
+- **Adaptive Tactics**: Adjusts extraction approach based on scammer's psychological profile
+- **Natural Integration**: Extraction hints are woven into persona-appropriate conversation
+
 ### 🔄 7-Stage Conversation Flow
 
 1. **Initial Hook** - Scammer's opening message
@@ -372,6 +399,8 @@ agentic-honey-pot/
 │   ├── agents/
 │   │   ├── detector.py       # Scam detection agent
 │   │   ├── extractor.py      # Intelligence extraction
+│   │   ├── scammer_profiler.py   # 🧠 Psychology profiling
+│   │   ├── extraction_strategies.py # 🎯 Proactive extraction
 │   │   ├── personas.py       # Base persona definitions
 │   │   ├── enhanced_personas.py  # Human-like personas
 │   │   ├── optimized.py      # Combined agent (main)

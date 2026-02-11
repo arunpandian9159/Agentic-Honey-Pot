@@ -11,13 +11,15 @@
 3. [Persona System Implementation](#persona-system-implementation)
 4. [Scam Detection Pipeline](#scam-detection-pipeline)
 5. [Intelligence Extraction](#intelligence-extraction)
-6. [Session Management](#session-management)
-7. [Rate Limiting Implementation](#rate-limiting-implementation)
-8. [Conversation Flow Engine](#conversation-flow-engine)
-9. [Response Humanization](#response-humanization)
-10. [Testing Strategy](#testing-strategy)
-11. [Performance Considerations](#performance-considerations)
-12. [Future Enhancements](#future-enhancements)
+6. [Scammer Psychology Profiling](#scammer-psychology-profiling)
+7. [Proactive Intelligence Extraction](#proactive-intelligence-extraction)
+8. [Session Management](#session-management)
+9. [Rate Limiting Implementation](#rate-limiting-implementation)
+10. [Conversation Flow Engine](#conversation-flow-engine)
+11. [Response Humanization](#response-humanization)
+12. [Testing Strategy](#testing-strategy)
+13. [Performance Considerations](#performance-considerations)
+14. [Future Enhancements](#future-enhancements)
 
 ---
 
@@ -524,14 +526,109 @@ pytest tests/test_enhanced_detection.py -v
 
 ---
 
+## Scammer Psychology Profiling
+
+> **Module**: `app/agents/scammer_profiler.py`
+
+### Overview
+
+Real-time psychological profiling of scammer behavior using zero-cost, rule-based pattern analysis. The profiler runs on every message with no additional LLM calls — it analyzes linguistic markers in conversation history to produce a behavioral profile that drives adaptive response generation.
+
+### Scoring Algorithm
+
+| Metric                   | Markers Analyzed                                                          | Scoring Method                         |
+| ------------------------ | ------------------------------------------------------------------------- | -------------------------------------- |
+| **Aggression** (0-1)     | 27 threat keywords + CAPS words + exclamation marks                       | `hits × 0.08 + caps × 0.03 + ! × 0.04` |
+| **Patience** (0-1)       | 20 impatience markers + message repetition + length trends                | `1.0 - (hits × 0.1 + repeats × 0.15)`  |
+| **Sophistication** (0-1) | 18 technical terms + reference numbers + formal language                  | `hits × 0.07 + patterns × 0.15`        |
+| **Manipulation** (0-1)   | 5 categories × 8-10 markers each (fear, urgency, authority, guilt, greed) | `total_hits × 0.06`                    |
+
+### Tactical Mapping
+
+```python
+Profile → Tactic:
+  high_aggression + low_patience → "show_more_confusion"    # Waste their time
+  high_sophistication            → "more_realistic_persona"  # Avoid detection
+  high_manipulation              → "strategic_almost_compliance"  # Extract info
+  frustrated (low patience)      → "dangle_compliance"       # Keep them hooked
+  default                        → "maintain_engagement"     # Natural engagement
+```
+
+### Integration Flow
+
+```
+Scammer Message → ScammerProfiler.analyze(history)
+                    ↓
+                Profile Dict (aggression, patience, sophistication, manipulation)
+                    ↓
+                get_prompt_modifier(profile) → concise LLM hint (< 120 chars)
+                    ↓
+                Injected into LLM prompt alongside persona + context
+```
+
+### Performance Impact
+
+- **Latency**: < 1ms (pure string matching, no ML/LLM calls)
+- **Token overhead**: ~15-30 extra tokens per prompt
+- **Memory**: Zero additional memory (stateless)
+
+---
+
+## Proactive Intelligence Extraction
+
+> **Module**: `app/agents/extraction_strategies.py`
+
+### Overview
+
+Moves beyond passive response generation to actively steer conversations toward extracting specific intelligence types. The Intel Gap Analysis module identifies missing intel and generates targeted extraction hints for the LLM prompt.
+
+### Intel Gap Analysis
+
+```
+Session Intelligence State → IntelGapAnalysis.analyze(session)
+                               ↓
+                             Gaps prioritized by value:
+                               1. UPI IDs (priority: 1, success rate: 82%)
+                               2. Bank Accounts (priority: 2, success rate: 67%)
+                               3. Phishing Links (priority: 3, success rate: 60%)
+                               4. Phone Numbers (priority: 4, success rate: 55%)
+                               ↓
+                             Extraction hint generated for top gap
+```
+
+### Extraction Strategies (4 Categories, 19 Tactics)
+
+| Category            | # Tactics | Example                                                            |
+| ------------------- | --------- | ------------------------------------------------------------------ |
+| `need_upi`          | 5         | "I tried but the app showed error. Can you send the UPI ID again?" |
+| `need_bank_account` | 5         | "I went to the bank and they need full account details."           |
+| `need_link`         | 5         | "My phone is blocking it. Which website was it?"                   |
+| `need_phone_number` | 4         | "My phone is about to die. What number should I call you on?"      |
+
+### Psychology-Aware Extraction
+
+The extraction system considers the scammer's psychological profile:
+
+- **Impatient scammer**: More confused questioning when extracting ("wait what was the UPI again?")
+- **Sophisticated scammer**: Formal extraction requests ("I need the account number for NEFT transfer")
+- **Frustrated scammer**: Show willingness while creating obstacles ("I'll do it, just share the details")
+
+### Stage-Aware Softening
+
+- **Early-mid conversation** (msg ≤ 6): Subtle extraction ("Try to naturally ask...")
+- **Late conversation** (msg > 6): Direct extraction ("Actively try to extract...")
+
+---
+
 ## Future Enhancements
 
 ### Planned Features
 
-1. **Scammer Psychology Profiling** - Analyze aggression, patience, sophistication
-2. **Multi-Language Support** - Hindi, Tamil, Telugu scam detection
-3. **Live Analytics Dashboard** - Real-time statistics
-4. **RAG-Powered Learning** - Learn from successful conversations
+1. ~~**Scammer Psychology Profiling**~~ ✅ Implemented
+2. ~~**Proactive Intelligence Extraction**~~ ✅ Implemented
+3. **Multi-Language Support** - Hindi, Tamil, Telugu scam detection
+4. **Live Analytics Dashboard** - Real-time statistics
+5. ~~**RAG-Powered Learning**~~ - ✅ Implemented
 
 ### Architecture Ready
 

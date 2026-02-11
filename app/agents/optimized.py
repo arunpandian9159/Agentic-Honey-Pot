@@ -18,6 +18,8 @@ from app.agents.enhanced_personas import ENHANCED_PERSONAS, get_persona
 from app.agents.response_variation import ResponseVariationEngine
 from app.agents.natural_flow import get_stage_guidance
 from app.agents.context_aware import get_concise_context
+from app.agents.scammer_profiler import ScammerProfiler
+from app.agents.extraction_strategies import get_extraction_prompt_hint
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +72,7 @@ class OptimizedAgent:
         self.llm = llm_client
         self.persona_manager = PersonaManager()
         self.variation_engine = ResponseVariationEngine()
+        self.scammer_profiler = ScammerProfiler()
 
     async def process_message(
         self,
@@ -107,6 +110,15 @@ class OptimizedAgent:
         context_hint = get_concise_context(session, msg_count)
 
         # Combined prompt - detection + extraction + response
+        # Scammer psychology profiling (zero-cost, rule-based)
+        profiler_output = self.scammer_profiler.analyze(
+            session.get("conversation_history", [])
+        )
+        psychology_hint = self.scammer_profiler.get_prompt_modifier(profiler_output)
+
+        # Proactive intel extraction hint
+        extraction_hint = get_extraction_prompt_hint(session, profiler_output)
+
         prompt = f"""Analyze and respond. Output ONLY valid JSON.
 
 MSG: "{scammer_message}"
@@ -114,6 +126,8 @@ HISTORY: {history_text}
 PERSONA: {persona_prompt[:300]}
 TACTIC: {stage_tactic}
 {context_hint}
+{psychology_hint}
+{extraction_hint}
 
 JSON output:
 {{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"suspicious_keywords":[]}},"response":"victim reply 1-2 sentences"}}
