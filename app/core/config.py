@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     # LLM settings
     LLM_MODEL: str = "llama-3.3-70b-versatile"
     SCAM_DETECTION_THRESHOLD: float = 0.65
-    MAX_TOKENS_GENERATION: int = 350
-    MAX_TOKENS_JSON: int = 250
+    MAX_TOKENS_GENERATION: int = 300
+    MAX_TOKENS_JSON: int = 200
 
     class Config:
         env_file = ".env"
