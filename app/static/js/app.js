@@ -58,13 +58,32 @@ async function checkHealth() {
       showToast("Connected to API successfully!", "success");
       refreshMetrics();
     } else {
-      throw new Error(`HTTP ${response.status}`);
+      const errorData = await parseErrorResponse(response);
+      throw new Error(errorData.message);
     }
   } catch (error) {
     healthEl.textContent = "Offline";
     healthEl.className = "status-value error";
     statusCard.classList.add("warning");
     showToast(`Connection failed: ${error.message}`, "error");
+  }
+}
+
+async function parseErrorResponse(response) {
+  try {
+    const data = await response.json();
+    return {
+      message:
+        data.detail ||
+        data.message ||
+        `HTTP ${response.status}: ${response.statusText}`,
+      status: response.status,
+    };
+  } catch (e) {
+    return {
+      message: `HTTP ${response.status}: ${response.statusText}`,
+      status: response.status,
+    };
   }
 }
 
@@ -152,7 +171,8 @@ async function sendMessage() {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorData = await parseErrorResponse(response);
+      throw new Error(errorData.message);
     }
 
     const data = await response.json();
@@ -361,16 +381,22 @@ function updateSessionDisplay() {
 
 function insertQuickMessage(type) {
   const messages = {
-    lottery: "Congratulations! You've won ₹50,00,000 in our Lucky Draw! Send ₹2,500 processing fee to claim. Contact: 9876543210 or pay at lottery.claim-now.tk",
+    lottery:
+      "Congratulations! You've won ₹50,00,000 in our Lucky Draw! Send ₹2,500 processing fee to claim. Contact: 9876543210 or pay at lottery.claim-now.tk",
     bank: "Dear customer, your SBI account is blocked due to KYC expiry. Update immediately at sbi-kyc-update.com or call 8203549852. Ignore to lose access.",
     job: "Hi! Work from home opportunity! Earn ₹15,000/day. No experience needed. Pay ₹500 registration fee to join. UPI: job.recruiter@ybl",
     kyc: "Your Paytm KYC is incomplete. Complete verification within 24 hours to avoid account suspension. Visit paytm-kyc-verify.in or transfer ₹1 to verify@paytm",
-    delivery: "Your Amazon package #AWB7829341 is held at warehouse. Pay ₹49 delivery charge to release. Click: amazon-delivery-fee.in/pay or UPI: delivery.amt@ybl",
-    investment: "URGENT: Bitcoin investment opportunity! Invest ₹10,000 today and get ₹1,50,000 in 7 days. Guaranteed returns! Join now: crypto-profit-india.com. WhatsApp: 7890123456",
+    delivery:
+      "Your Amazon package #AWB7829341 is held at warehouse. Pay ₹49 delivery charge to release. Click: amazon-delivery-fee.in/pay or UPI: delivery.amt@ybl",
+    investment:
+      "URGENT: Bitcoin investment opportunity! Invest ₹10,000 today and get ₹1,50,000 in 7 days. Guaranteed returns! Join now: crypto-profit-india.com. WhatsApp: 7890123456",
     otp: "Dear user, your OTP for ₹24,999 transaction is 847291. If not initiated by you, call 9012345678 immediately to block your card. Do NOT share this OTP.",
-    customs: "Indian Customs Notice: Your international parcel is held. Pay ₹3,200 customs duty within 24 hours or it will be returned. Pay at: customs-india-clearance.com. Ref: ICP/2026/89341",
-    insurance: "ALERT: Your LIC policy #48291037 lapses TODAY. Renew immediately to avoid losing ₹12,00,000 coverage. Pay ₹1,999 renewal at lic-renew-online.in or call 8765432109",
-    techsupport: "Microsoft Security Alert! Your Windows license has expired and your PC is infected with 3 viruses. Call our toll-free helpline 1800-585-8484 immediately. Visit: microsoft-support-india.tk",
+    customs:
+      "Indian Customs Notice: Your international parcel is held. Pay ₹3,200 customs duty within 24 hours or it will be returned. Pay at: customs-india-clearance.com. Ref: ICP/2026/89341",
+    insurance:
+      "ALERT: Your LIC policy #48291037 lapses TODAY. Renew immediately to avoid losing ₹12,00,000 coverage. Pay ₹1,999 renewal at lic-renew-online.in or call 8765432109",
+    techsupport:
+      "Microsoft Security Alert! Your Windows license has expired and your PC is infected with 3 viruses. Call our toll-free helpline 1800-585-8484 immediately. Visit: microsoft-support-india.tk",
   };
 
   const input = document.getElementById("messageInput");
