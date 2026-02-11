@@ -30,11 +30,11 @@ class Colors:
 
 # ── Map log levels to colored labels ─────────────────────────────────
 LEVEL_STYLES = {
-    "DEBUG":    f"{Colors.GRAY}DBG{Colors.RESET}",
-    "INFO":     f"{Colors.GREEN}INF{Colors.RESET}",
-    "WARNING":  f"{Colors.YELLOW}WRN{Colors.RESET}",
-    "ERROR":    f"{Colors.RED}ERR{Colors.RESET}",
-    "CRITICAL": f"{Colors.BG_RED}{Colors.WHITE}CRT{Colors.RESET}",
+    "DEBUG":    f"{Colors.GRAY}DEBUG{Colors.RESET}",
+    "INFO":     f"{Colors.GREEN}INFO{Colors.RESET}",
+    "WARNING":  f"{Colors.YELLOW}WARN{Colors.RESET}",
+    "ERROR":    f"{Colors.RED}ERROR{Colors.RESET}",
+    "CRITICAL": f"{Colors.BG_RED}{Colors.WHITE}CRIT{Colors.RESET}",
 }
 
 # ── Short aliases for module names ───────────────────────────────────

@@ -224,7 +224,11 @@ function addMessage(text, sender) {
   wrapper.className = `message-wrapper ${sender}`;
 
   const avatarEmoji =
-    sender === "scammer" ? "<i class=\"fa-solid fa-triangle-exclamation\" style=\"color: #fcd115;\"></i>" : sender === "user" ? "<i class=\"fa-solid fa-robot\" style=\"color: #ffffff;\"></i>" : "<i class=\"fa-solid fa-bullhorn\" style=\"color: #8b5cf6;\"></i>";
+    sender === "scammer"
+      ? '<i class="fa-solid fa-triangle-exclamation" style="color: #fcd115;"></i>'
+      : sender === "user"
+        ? '<i class="fa-solid fa-robot" style="color: #ffffff;"></i>'
+        : '<i class="fa-solid fa-bullhorn" style="color: #8b5cf6;"></i>';
 
   const senderLabel =
     sender === "scammer"
@@ -255,7 +259,7 @@ function addMessage(text, sender) {
         readStatus
           ? `
         <div class="message-footer">
-          <span class="read-indicator ${readStatus}">${readStatus === "read" ? "<i class=\"fa-solid fa-check-double\" style=\"color: #3b82f6;\"></i>" : "<i class=\"fa-solid fa-check\" style=\"color: #6b7280;\"></i>"}</span>
+          <span class="read-indicator ${readStatus}">${readStatus === "read" ? '<i class="fa-solid fa-check-double" style="color: #3b82f6;"></i>' : '<i class="fa-solid fa-check" style="color: #6b7280;"></i>'}</span>
         </div>
       `
           : ""
@@ -349,17 +353,24 @@ function resetSession() {
 }
 
 function updateSessionDisplay() {
-  document.getElementById("sessionIdDisplay").textContent =
-    sessionId.slice(0, 8) + "...";
+  document.getElementById("sessionIdDisplay").textContent = sessionId.slice(
+    0,
+    30,
+  );
 }
 
 function insertQuickMessage(type) {
   const messages = {
-    lottery:
-      "Congratulations! You've won ₹50,00,000 in our Lucky Draw! Send ₹2,500 processing fee to claim. Contact: 9876543210 or pay at lottery.claim-now.tk",
+    lottery: "Congratulations! You've won ₹50,00,000 in our Lucky Draw! Send ₹2,500 processing fee to claim. Contact: 9876543210 or pay at lottery.claim-now.tk",
     bank: "Dear customer, your SBI account is blocked due to KYC expiry. Update immediately at sbi-kyc-update.com or call 8203549852. Ignore to lose access.",
     job: "Hi! Work from home opportunity! Earn ₹15,000/day. No experience needed. Pay ₹500 registration fee to join. UPI: job.recruiter@ybl",
     kyc: "Your Paytm KYC is incomplete. Complete verification within 24 hours to avoid account suspension. Visit paytm-kyc-verify.in or transfer ₹1 to verify@paytm",
+    delivery: "Your Amazon package #AWB7829341 is held at warehouse. Pay ₹49 delivery charge to release. Click: amazon-delivery-fee.in/pay or UPI: delivery.amt@ybl",
+    investment: "URGENT: Bitcoin investment opportunity! Invest ₹10,000 today and get ₹1,50,000 in 7 days. Guaranteed returns! Join now: crypto-profit-india.com. WhatsApp: 7890123456",
+    otp: "Dear user, your OTP for ₹24,999 transaction is 847291. If not initiated by you, call 9012345678 immediately to block your card. Do NOT share this OTP.",
+    customs: "Indian Customs Notice: Your international parcel is held. Pay ₹3,200 customs duty within 24 hours or it will be returned. Pay at: customs-india-clearance.com. Ref: ICP/2026/89341",
+    insurance: "ALERT: Your LIC policy #48291037 lapses TODAY. Renew immediately to avoid losing ₹12,00,000 coverage. Pay ₹1,999 renewal at lic-renew-online.in or call 8765432109",
+    techsupport: "Microsoft Security Alert! Your Windows license has expired and your PC is infected with 3 viruses. Call our toll-free helpline 1800-585-8484 immediately. Visit: microsoft-support-india.tk",
   };
 
   const input = document.getElementById("messageInput");
@@ -426,7 +437,12 @@ function showToast(message, type = "success") {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
 
-  const icon = type === "success" ? "<i class=\"fa-solid fa-check\" style=\"color: #10b981;\"></i>" : type === "error" ? "<i class=\"fa-solid fa-xmark\" style=\"color: #ef4444;\"></i>" : "<i class=\"fa-solid fa-exclamation\" style=\"color: #f59e0b;\"></i>";
+  const icon =
+    type === "success"
+      ? '<i class="fa-solid fa-check" style="color: #10b981;"></i>'
+      : type === "error"
+        ? '<i class="fa-solid fa-xmark" style="color: #ef4444;"></i>'
+        : '<i class="fa-solid fa-exclamation" style="color: #f59e0b;"></i>';
   toast.innerHTML = `<span style="font-size: 1.2rem;">${icon}</span><span>${escapeHtml(message)}</span>`;
 
   container.appendChild(toast);
