@@ -14,6 +14,7 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 # Global client instance
 _qdrant_client = None
+_rag_is_functional = False
 
 
 def get_qdrant_client():
@@ -30,12 +31,12 @@ def get_qdrant_client():
     try:
         from qdrant_client import QdrantClient
 
+        # Low timeout for initial connection check
         _qdrant_client = QdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
-            timeout=3
+            timeout=5
         )
-        logger.info("✓ Connected to Qdrant Cloud")
         return _qdrant_client
 
     except Exception as e:
@@ -86,8 +87,10 @@ def initialize_collections() -> bool:
     Create collections and payload indexes if they don't exist.
     Returns True if successful, False otherwise.
     """
+    global _rag_is_functional
     client = get_qdrant_client()
     if not client:
+        _rag_is_functional = False
         return False
 
     try:
@@ -100,14 +103,20 @@ def initialize_collections() -> bool:
             "integer": PayloadSchemaType.INTEGER
         }
 
+        # Check connectivity by listing collections
+        client.get_collections()
+        
         for name, config in COLLECTIONS.items():
             _ensure_collection_exists(client, name, config, Distance, VectorParams)
             _ensure_indexes_exist(client, name, config, schema_map)
 
+        logger.info("✓ RAG system online (Qdrant Cloud)")
+        _rag_is_functional = True
         return True
 
     except Exception as e:
-        logger.error(f"Failed to initialize collections: {e}")
+        logger.error(f"RAG initialization failed: {e}")
+        _rag_is_functional = False
         return False
 
 
@@ -152,5 +161,10 @@ def _ensure_indexes_exist(client, name, config, schema_map):
 
 
 def is_rag_enabled() -> bool:
-    """Check if RAG system is properly configured."""
+    """Check if RAG system is configured in environment."""
     return bool(QDRANT_URL and QDRANT_API_KEY)
+
+
+def is_rag_functional() -> bool:
+    """Check if RAG system is properly initialized and reachable."""
+    return _rag_is_functional and is_rag_enabled()

@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Dict, List
 
 from app.rag.embeddings import embedding_generator
+from app.core.rag_config import is_rag_functional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class KnowledgeStore:
         intelligence_so_far: Dict
     ):
         """Store single interaction as response pattern."""
-        if not self.client:
+        if not is_rag_functional() or not self.client:
             return
         
         try:
@@ -74,9 +75,11 @@ class KnowledgeStore:
             logger.debug(f"Stored response pattern: {pattern_id}")
         
         except Exception as e:
-            logger.error(f"Failed to store interaction in 'response_patterns': {e}", exc_info=True)
-            if self.client:
-                logger.debug(f"Client methods available: {dir(self.client)}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG storage unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Failed to store interaction in 'response_patterns': {e}")
     
     async def store_completed_conversation(
         self,
@@ -155,9 +158,11 @@ class KnowledgeStore:
                 )
         
         except Exception as e:
-            logger.error(f"Failed to store completed conversation in 'conversations': {e}", exc_info=True)
-            if self.client:
-                logger.debug(f"Client methods available: {dir(self.client)}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG storage unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Failed to store completed conversation in 'conversations': {e}")
     
     async def _store_extraction_tactics(
         self,

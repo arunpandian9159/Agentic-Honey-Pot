@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends, Query
 from app.core.config import settings
 from app.core.session import SessionManager
 from app.core.llm import GroqClient
-from app.core.rag_config import is_rag_enabled, get_qdrant_client
+from app.core.rag_config import is_rag_enabled, is_rag_functional, get_qdrant_client
 from app.agents.optimized import OptimizedAgent
 from app.agents.extractor import IntelligenceExtractor
 from app.utils.callbacks import GUVICallback
@@ -36,9 +36,9 @@ router = APIRouter()
 session_manager = SessionManager()
 groq_client = GroqClient()
 
-# Initialize agent - RAG-enhanced if available, else fallback to optimized
+# Initialize agent - RAG-enhanced if functional, else fallback to optimized
 _rag_agent = None
-if is_rag_enabled():
+if is_rag_functional():
     try:
         from app.agents.rag_conversation_manager import RAGEnhancedConversationManager
         qdrant_client = get_qdrant_client()

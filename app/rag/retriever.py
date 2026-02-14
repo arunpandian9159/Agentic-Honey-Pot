@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Optional
 
 from app.rag.embeddings import embedding_generator
+from app.core.rag_config import is_rag_functional
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class RAGRetriever:
         - Same persona
         - High intelligence score
         """
-        if not self.client:
+        if not is_rag_functional() or not self.client:
             return []
         
         try:
@@ -81,7 +82,11 @@ class RAGRetriever:
             return [result.payload for result in results]
         
         except Exception as e:
-            logger.error(f"Retrieval error: {e}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG retrieval unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Retrieval error: {e}")
             return []
     
     async def retrieve_response_patterns(
@@ -95,7 +100,7 @@ class RAGRetriever:
         Retrieve effective response patterns.
         Returns specific responses that worked in similar situations.
         """
-        if not self.client:
+        if not is_rag_functional() or not self.client:
             return []
         
         try:
@@ -136,7 +141,11 @@ class RAGRetriever:
             return [result.payload for result in results]
         
         except Exception as e:
-            logger.error(f"Pattern retrieval error: {e}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG pattern retrieval unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Pattern retrieval error: {e}")
             return []
     
     async def retrieve_extraction_tactics(
@@ -150,7 +159,7 @@ class RAGRetriever:
         Retrieve successful intelligence extraction tactics.
         Returns proven tactics for extracting specific intel types.
         """
-        if not self.client:
+        if not is_rag_functional() or not self.client:
             return []
         
         try:
@@ -191,7 +200,11 @@ class RAGRetriever:
             return [result.payload for result in results]
         
         except Exception as e:
-            logger.error(f"Tactics retrieval error: {e}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG tactics retrieval unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Tactics retrieval error: {e}")
             return []
     
     async def retrieve_persona_examples(
@@ -204,7 +217,7 @@ class RAGRetriever:
         Retrieve examples to maintain persona consistency.
         Returns conversations where persona was well-maintained.
         """
-        if not self.client:
+        if not is_rag_functional() or not self.client:
             return []
         
         try:
@@ -246,7 +259,11 @@ class RAGRetriever:
             return [result.payload for result in results]
         
         except Exception as e:
-            logger.error(f"Persona retrieval error: {e}")
+            msg = str(e)
+            if "getaddrinfo failed" in msg or "ConnectError" in msg:
+                logger.warning(f"RAG persona retrieval unavailable (connection error): {msg}")
+            else:
+                logger.error(f"Persona retrieval error: {e}")
             return []
     
     def format_retrieval_context(self, results: List[Dict], context_type: str) -> str:

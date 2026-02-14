@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from app.agents.enhanced_conversation import EnhancedConversationManager
 from app.core.llm import GroqClient
+from app.core.rag_config import is_rag_functional
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
     
     def _init_rag_components(self):
         """Initialize RAG components lazily."""
+        if not is_rag_functional():
+            return
+
         try:
             from app.rag.retriever import RAGRetriever
             from app.rag.knowledge_store import KnowledgeStore
@@ -47,9 +51,9 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         Process message with optional RAG enhancement.
         Falls back to base implementation if RAG unavailable.
         """
-        # Get RAG context if available
+        # Get RAG context if functional
         rag_context = ""
-        if self._retriever:
+        if is_rag_functional() and self._retriever:
             try:
                 rag_context = await self._build_rag_context(
                     scammer_message=scammer_message,
@@ -65,7 +69,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         result = await super().process_message(scammer_message, session, metadata)
         
         # Store interaction for learning
-        if self._knowledge_store and result.get("is_scam"):
+        if is_rag_functional() and self._knowledge_store and result.get("is_scam"):
             try:
                 await self._knowledge_store.store_interaction(
                     session_id=session.get("session_id", "unknown"),
@@ -85,12 +89,8 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
         scammer_message: str,
         session: Dict
     ) -> str:
-        """Build RAG context from retrieved examples.
-        
-        Runs all RAG queries concurrently and applies an overall timeout
-        to prevent blocking the API response.
-        """
-        if not self._retriever:
+        """Build RAG context from retrieved examples."""
+        if not is_rag_functional() or not self._retriever:
             return ""
         
         persona_name = session.get("persona") or "tech_naive_parent"
@@ -223,7 +223,7 @@ class RAGEnhancedConversationManager(EnhancedConversationManager):
     
     async def store_completed_conversation(self, session: Dict, intelligence_score: float):
         """Store completed conversation for learning."""
-        if not self._knowledge_store:
+        if not is_rag_functional() or not self._knowledge_store:
             return
         
         try:
