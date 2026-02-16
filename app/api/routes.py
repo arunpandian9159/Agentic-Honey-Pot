@@ -217,8 +217,23 @@ async def chat_endpoint(
 
         return ChatResponse(status="success", reply=reply, response=reply)
 
+    except json.JSONDecodeError as e:
+        logger.warning(f"JSON parse error in chat processing: {e}")
+        error_reply = "I'm sorry, I didn't understand. Can you explain again?"
+        return ChatResponse(status="success", reply=error_reply, response=error_reply)
+
+    except asyncio.TimeoutError:
+        logger.error("LLM request timed out")
+        error_reply = "Sorry, I'm having trouble right now. Can you say that again?"
+        return ChatResponse(status="success", reply=error_reply, response=error_reply)
+
+    except ValueError as e:
+        logger.warning(f"Validation error: {e}")
+        error_reply = "I'm sorry, I didn't understand. Can you explain again?"
+        return ChatResponse(status="success", reply=error_reply, response=error_reply)
+
     except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error ({type(e).__name__}): {str(e)}", exc_info=True)
         error_reply = "I'm sorry, I didn't understand. Can you explain again?"
         return ChatResponse(status="success", reply=error_reply, response=error_reply)
 

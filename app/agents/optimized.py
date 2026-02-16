@@ -31,22 +31,43 @@ KNOWN_FRAGMENTS = frozenset([
     "i'm not", "i'm confused", "i'm not sure", "hello i'm", "i'm not sure i",
 ])
 
-# Scam indicators for fallback detection
+# Scam indicators for fallback detection (expanded for deeper red-flag coverage)
 SCAM_KEYWORDS = [
     "urgent", "blocked", "suspended", "verify", "account", "bank", "upi",
     "prize", "winner", "lottery", "claim", "fee", "payment", "otp", "kyc",
-    "microsoft", "virus", "hacked", "job", "selected", "salary", "http"
+    "microsoft", "virus", "hacked", "job", "selected", "salary", "http",
+    "freeze", "aadhar", "pan", "cvv", "pin", "insurance", "refund",
+    "cashback", "loan", "emi", "reward", "offer", "free", "guarantee",
+    "processing", "registration", "investigation", "legal action",
+    "police", "arrest", "warrant", "deadline", "expire", "deactivate",
+    "compromise", "unauthorized", "suspicious", "immediately",
 ]
 
-# Scam type detection keywords
+# Scam type detection keywords (expanded with India-specific terms)
 SCAM_TYPE_KEYWORDS = {
-    "bank_fraud": ["bank", "account", "kyc", "sbi", "hdfc"],
-    "upi_fraud": ["upi", "@", "paytm", "phonepe"],
-    "phishing": ["http", "link", "click", "www"],
-    "job_scam": ["job", "selected", "salary", "hiring"],
-    "lottery": ["prize", "winner", "lottery", "won"],
-    "investment": ["invest", "return", "profit", "double"],
-    "tech_support": ["virus", "microsoft", "hacked"],
+    "bank_fraud": [
+        "bank", "account", "kyc", "sbi", "hdfc", "icici", "axis",
+        "blocked", "suspended", "freeze", "deactivate", "neft",
+        "rtgs", "ifsc", "aadhar", "pan", "cvv",
+    ],
+    "upi_fraud": [
+        "upi", "@", "paytm", "phonepe", "googlepay", "gpay",
+        "refund", "collect request", "payment failed", "cashback",
+    ],
+    "phishing": ["http", "link", "click", "www", "verify", "login", "update"],
+    "job_scam": [
+        "job", "selected", "salary", "hiring", "work from home",
+        "registration fee", "training fee", "placement",
+    ],
+    "lottery": ["prize", "winner", "lottery", "won", "lucky draw", "reward", "congratulations"],
+    "investment": [
+        "invest", "return", "profit", "double", "trading",
+        "crypto", "forex", "guaranteed return", "mutual fund",
+    ],
+    "tech_support": [
+        "virus", "microsoft", "hacked", "apple", "tech support",
+        "remote access", "anydesk", "teamviewer", "compromised",
+    ],
 }
 
 # Persona selection mapping by scam type
@@ -130,15 +151,41 @@ TACTIC: {stage_tactic}
 {extraction_hint}
 
 JSON output:
-{{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"email_addresses":[],"suspicious_keywords":[]}},"response":"victim reply 1-2 sentences"}}
+{{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"email_addresses":[],"suspicious_keywords":[]}},"response":"victim reply 1-3 sentences"}}
 
-SCAM SIGNS: urgency, threats, payment requests, OTP/KYC, prizes, job offers
-EXTRACT: UPI IDs (x@bank), phones (10 digits), links (http), accounts (12+ digits), emails (x@domain.com), suspicious keywords (urgent, verify, blocked, prize, otp, kyc, etc.)
+RED FLAG INDICATORS (flag ALL that apply):
+- Urgency/deadline threats ("immediately", "within 2 hours", "last chance")
+- Authority impersonation ("I'm from SBI/RBI/police/government")
+- Payment/fee demands ("send Rs", "processing fee", "registration fee")
+- OTP/KYC/CVV/PIN requests
+- Unsolicited prizes, jobs, cashback, refunds
+- Suspicious links or remote-access requests (AnyDesk, TeamViewer)
+- Legal/arrest threats ("police complaint", "warrant", "legal action")
+- Credential harvesting (passwords, card numbers)
+
+EXTRACT ALL intelligence found:
+- UPI IDs: name@bankcode (e.g. fraud@ybl, scam@paytm)
+- Phones: 10 digits starting 6-9, or +91-XXXXXXXXXX, or with spaces/dashes
+- Links: any http/https URL
+- Bank accounts: 9-18 digit numbers
+- IFSC codes: 4 letters + 0 + 6 alphanumeric
+- Emails: user@domain.com
+- Keywords: urgency, threats, payment, verify, blocked, prize, otp, kyc, etc.
+
+PROBING — weave these into the response to extract intel:
+- Ask scammer to repeat/confirm numbers ("Sorry, what was that number again?")
+- Request branch/employee ID ("Which branch are you calling from?")
+- Ask for callback number ("Can I call you back?")
+- Request payment details ("Where should I send the money exactly?")
+- Feign technical issues ("The link isn't opening, can you resend?")
+- Ask for verification ("How do I know this is really from the bank?")
+
 RESPONSE RULES:
 - Sound like a REAL person, not an AI
 - Use persona-appropriate language and imperfections
 - Vary response style from previous messages
-- Keep scammer engaged, extract their payment details"""
+- Include at least ONE probing question to extract details
+- Keep scammer engaged while never sharing real sensitive info"""
 
         try:
             response = await self.llm.generate_json(prompt=prompt, max_tokens=settings.MAX_TOKENS_JSON)
@@ -177,8 +224,11 @@ RESPONSE RULES:
 
             return result
 
+        except json.JSONDecodeError as e:
+            logger.warning(f"LLM returned invalid JSON, using fallback: {e}")
+            return _fallback_response(scammer_message, persona_name, msg_count)
         except Exception as e:
-            logger.warning(f"Combined processing failed: {e}")
+            logger.error(f"Agent processing failed ({type(e).__name__}): {e}")
             return _fallback_response(scammer_message, persona_name, msg_count)
 
     def _normalize_result(self, result: Dict, persona: str, msg_count: int = 0, scammer_message: str = "") -> Dict:
@@ -285,45 +335,96 @@ def _count_intel(intel: Dict) -> int:
 
 
 def _fallback_response(message: str, persona: str, msg_count: int) -> Dict:
-    """Generate fallback result without LLM."""
+    """Generate fallback result without LLM. Uses probing questions to elicit intel."""
     msg_lower = message.lower()
 
-    # Check if scam using keywords
+    # Check if scam using keywords (lowered threshold — 1 keyword is enough)
     matches = [kw for kw in SCAM_KEYWORDS if kw in msg_lower]
-    is_scam = len(matches) >= 2
+    is_scam = len(matches) >= 1
 
-    # Extract intel with regex
-    # Extract emails first for filtering
+    # Extract intel with improved regex patterns
     emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', message)
     email_lower_set = {e.lower() for e in emails}
+
+    # UPI IDs: word@bankcode but exclude obvious email domains
+    email_domains = {"gmail", "yahoo", "outlook", "hotmail", "protonmail", "com", "org", "net", "io", "co"}
+    upi_candidates = re.findall(r'[\w\.\-]+@[\w]+', message)
+    upi_ids = [
+        u for u in upi_candidates
+        if not any(d in u.lower().split("@")[-1] for d in email_domains)
+        and u.lower() not in email_lower_set
+    ]
+
+    # Phone numbers: handle +91, country codes, dashes, spaces
+    phone_patterns = (
+        re.findall(r'(?:\+91[\s\-]?)?[6-9]\d{9}', message)
+        + re.findall(r'\+91[\s\-]?\d{10}', message)
+    )
+    phones = list(set(p.replace(" ", "").replace("-", "") for p in phone_patterns))
+
+    # Bank accounts: 9 to 18 digits
+    bank_accounts = re.findall(r'\b\d{9,18}\b', message)
+
+    # IFSC codes
+    ifsc_codes = re.findall(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', message)
+
     intel = {
-        "bank_accounts": re.findall(r'\b\d{10,18}\b', message),
-        "upi_ids": [
-            u for u in re.findall(r'[\w\.\-]+@[\w]+', message)
-            if not any(d in u.lower() for d in ["gmail", "yahoo", "outlook", "com", "org", "net", "in"])
-            and u.lower() not in email_lower_set
-        ],
-        "phone_numbers": re.findall(r'[6-9]\d{9}', message),
+        "bank_accounts": bank_accounts + ifsc_codes,
+        "upi_ids": upi_ids,
+        "phone_numbers": phones,
         "phishing_links": re.findall(r'https?://\S+', message),
         "email_addresses": emails,
-        "suspicious_keywords": matches[:5]
+        "suspicious_keywords": matches[:8]
     }
 
-    # Fallback responses by stage
+    # Fallback responses by stage — multiple probing variants per stage
+    stage_responses = {
+        "early": [
+            "What happened? Why is my account blocked? Can you tell me which account?",
+            "Oh no this is scary. Who are you calling from? What is your name?",
+            "What??? My account is blocked?? But I used it yesterday. Which branch are you from?",
+            "I'm confused. What do I need to do? Can you explain slowly please?",
+        ],
+        "mid_probe": [
+            "I see that its serious. Where exactly should I send this? What's the account number?",
+            "OK I want to fix this. Can you give me your phone number so I can call you back?",
+            "My son told me to ask for your employee ID before I do anything. What is it?",
+            "I'll do what you say but first, which bank should I transfer to? And what's the IFSC?",
+        ],
+        "mid_verify": [
+            "Before I do anything, can you verify who you are? What's your official ID?",
+            "Wait, can you tell me your department name and employee number please?",
+            "I need to check with my family first. Can you send me the link again so I can show them?",
+            "My neighbor says I should verify. Can you give me an official number to call back?",
+        ],
+        "late_extract": [
+            "Okay I'll do it. Where should I send the payment? What UPI ID should I use?",
+            "Fine fine I'll cooperate. Just tell me the account number and IFSC code.",
+            "OK I'm at the bank now. They're asking for the beneficiary account number. What is it?",
+            "Alright I'll send it. What's the exact UPI ID? And how much exactly?",
+        ],
+        "final": [
+            "The link isn't working. Can you send it again? My phone is slow.",
+            "I tried but it's showing error. Can you give me another link or number?",
+            "It's not going through. Is there another UPI ID I can try?",
+            "My phone froze. Can you resend everything — the link and your number?",
+        ],
+    }
+
     if msg_count <= 2:
-        response = "What happened Why is my account blocked?"
+        response = random.choice(stage_responses["early"])
     elif msg_count <= 5:
-        response = "I see that its serious. What should I do?"
+        response = random.choice(stage_responses["mid_probe"])
     elif msg_count <= 8:
-        response = "Before I do anything can you verify who you are?"
+        response = random.choice(stage_responses["mid_verify"])
     elif msg_count <= 12:
-        response = "Okay I'll do it. Where should I send the payment?"
+        response = random.choice(stage_responses["late_extract"])
     else:
-        response = "The link isn't working. Can you send it again?"
+        response = random.choice(stage_responses["final"])
 
     return {
         "is_scam": is_scam,
-        "confidence": min(len(matches) * 0.2, 0.9),
+        "confidence": min(len(matches) * 0.15 + 0.3, 0.95) if is_scam else 0.0,
         "scam_type": quick_scam_type(message),
         "intel": intel,
         "response": response,

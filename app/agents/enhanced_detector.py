@@ -19,13 +19,29 @@ logger = logging.getLogger(__name__)
 
 # Keyword-to-scam-type mapping for fallback classification
 SCAM_TYPE_KEYWORDS = {
-    "bank_fraud": ["bank", "kyc", "blocked", "suspended"],
-    "upi_fraud": ["upi", "paytm", "phonepe", "googlepay", "@"],
-    "phishing": ["http", "www", "link"],
-    "job_scam": ["job", "hiring", "selected", "position", "work from home"],
-    "lottery": ["won", "prize", "winner", "lottery", "lucky draw"],
-    "investment": ["invest", "profit", "return", "trading", "crypto"],
-    "tech_support": ["virus", "hacked", "microsoft", "apple", "tech support"],
+    "bank_fraud": [
+        "bank", "kyc", "blocked", "suspended", "account",
+        "sbi", "hdfc", "icici", "axis", "freeze", "deactivate",
+        "neft", "rtgs", "ifsc", "aadhar", "pan", "cvv",
+    ],
+    "upi_fraud": [
+        "upi", "paytm", "phonepe", "googlepay", "gpay", "@",
+        "refund", "collect request", "payment failed", "cashback",
+    ],
+    "phishing": ["http", "www", "link", "click", "verify", "login", "update"],
+    "job_scam": [
+        "job", "hiring", "selected", "position", "work from home",
+        "registration fee", "training fee", "placement",
+    ],
+    "lottery": ["won", "prize", "winner", "lottery", "lucky draw", "reward", "congratulations"],
+    "investment": [
+        "invest", "profit", "return", "trading", "crypto",
+        "forex", "guaranteed return", "mutual fund", "double",
+    ],
+    "tech_support": [
+        "virus", "hacked", "microsoft", "apple", "tech support",
+        "remote access", "anydesk", "teamviewer", "compromised",
+    ],
 }
 
 
@@ -119,7 +135,7 @@ class EnhancedScamDetector:
             overall_score = llm_confidence if llm.get("is_scam") else (1 - llm_confidence)
 
         red_flags = self._collect_red_flags(
-            linguistic, behavioral, technical, context, llm
+            linguistic, behavioral, technical, context, llm, message
         )
         legitimacy_signals = llm.get("legitimacy_signals", [])
         scam_type = self._determine_scam_type(message, llm, red_flags)
@@ -159,9 +175,10 @@ class EnhancedScamDetector:
         self,
         linguistic: Dict, behavioral: Dict,
         technical: Dict, context: Dict,
-        llm: Dict
+        llm: Dict,
+        message: str = ""
     ) -> List[str]:
-        """Collect all red flags from different analyzers."""
+        """Collect all red flags from different analyzers and message content."""
         red_flags = []
         threshold = DETECTION_CONFIG["red_flag_threshold"]
 
@@ -203,6 +220,22 @@ class EnhancedScamDetector:
         for flag in llm.get("red_flags", []):
             if flag not in red_flags:
                 red_flags.append(flag)
+
+        # Content-based red flags from the raw message
+        if message:
+            msg_lower = message.lower()
+            content_checks = [
+                (["otp", "one time password", "verification code"], "Requests OTP or verification code"),
+                (["legal action", "police complaint", "arrest", "warrant", "fir"], "Threatens legal or police action"),
+                (["anydesk", "teamviewer", "remote access", "screen share"], "Requests remote access to device"),
+                (["cvv", "card number", "expiry date", "atm pin"], "Requests card or banking credentials"),
+                (["rbi", "reserve bank", "government", "ministry"], "Impersonates government or regulatory body"),
+                (["immediately", "right now", "within 2 hours", "last chance", "final warning"], "Creates extreme urgency or deadline"),
+                (["processing fee", "registration fee", "security deposit"], "Demands upfront fee or deposit"),
+            ]
+            for keywords, flag_text in content_checks:
+                if any(kw in msg_lower for kw in keywords) and flag_text not in red_flags:
+                    red_flags.append(flag_text)
 
         return list(dict.fromkeys(red_flags))
 
