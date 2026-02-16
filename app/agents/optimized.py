@@ -130,10 +130,10 @@ TACTIC: {stage_tactic}
 {extraction_hint}
 
 JSON output:
-{{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"suspicious_keywords":[]}},"response":"victim reply 1-2 sentences"}}
+{{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"email_addresses":[],"suspicious_keywords":[]}},"response":"victim reply 1-2 sentences"}}
 
 SCAM SIGNS: urgency, threats, payment requests, OTP/KYC, prizes, job offers
-EXTRACT: UPI IDs (x@bank), phones (10 digits), links (http), accounts (12+ digits), suspicious keywords (urgent, verify, blocked, prize, otp, kyc, etc.)
+EXTRACT: UPI IDs (x@bank), phones (10 digits), links (http), accounts (12+ digits), emails (x@domain.com), suspicious keywords (urgent, verify, blocked, prize, otp, kyc, etc.)
 RESPONSE RULES:
 - Sound like a REAL person, not an AI
 - Use persona-appropriate language and imperfections
@@ -217,6 +217,7 @@ RESPONSE RULES:
         intel.setdefault("upi_ids", [])
         intel.setdefault("phone_numbers", [])
         intel.setdefault("links", [])
+        intel.setdefault("email_addresses", [])
         intel.setdefault("suspicious_keywords", [])
 
         # Rename for compatibility
@@ -292,14 +293,19 @@ def _fallback_response(message: str, persona: str, msg_count: int) -> Dict:
     is_scam = len(matches) >= 2
 
     # Extract intel with regex
+    # Extract emails first for filtering
+    emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', message)
+    email_lower_set = {e.lower() for e in emails}
     intel = {
         "bank_accounts": re.findall(r'\b\d{10,18}\b', message),
         "upi_ids": [
             u for u in re.findall(r'[\w\.\-]+@[\w]+', message)
-            if not any(d in u.lower() for d in ["gmail", "yahoo", "outlook"])
+            if not any(d in u.lower() for d in ["gmail", "yahoo", "outlook", "com", "org", "net", "in"])
+            and u.lower() not in email_lower_set
         ],
         "phone_numbers": re.findall(r'[6-9]\d{9}', message),
         "phishing_links": re.findall(r'https?://\S+', message),
+        "email_addresses": emails,
         "suspicious_keywords": matches[:5]
     }
 

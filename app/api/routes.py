@@ -61,7 +61,7 @@ metrics: Dict = {
 }
 
 # Intelligence keys to merge
-INTEL_KEYS = ["bank_accounts", "upi_ids", "phone_numbers", "phishing_links", "suspicious_keywords"]
+INTEL_KEYS = ["bank_accounts", "upi_ids", "phone_numbers", "phishing_links", "email_addresses", "suspicious_keywords"]
 
 
 async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str:
@@ -232,13 +232,15 @@ async def _send_callback(session_id: str, session: Dict, intel_score: float):
         intel_score=intel_score
     )
     total_messages = len(session["conversation_history"])
+    engagement_metrics = session_manager.get_engagement_metrics(session)
 
     callback_success = await guvi_callback.send_final_result(
         session_id=session_id,
         scam_detected=True,
         total_messages=total_messages,
         intelligence=session["intelligence"],
-        agent_notes=agent_notes
+        agent_notes=agent_notes,
+        engagement_metrics=engagement_metrics
     )
 
     if callback_success:

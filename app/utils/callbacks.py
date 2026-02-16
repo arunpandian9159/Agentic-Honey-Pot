@@ -24,7 +24,8 @@ class GUVICallback:
         scam_detected: bool,
         total_messages: int,
         intelligence: Dict,
-        agent_notes: str
+        agent_notes: str,
+        engagement_metrics: Dict = None
     ) -> bool:
         """
         Send final intelligence report to GUVI endpoint.
@@ -39,9 +40,10 @@ class GUVICallback:
         Returns:
             True if callback successful, False otherwise
         """
-        # Build payload with camelCase keys as expected by GUVI
+        # Build payload with camelCase keys as expected by evaluator
         payload = {
             "sessionId": session_id,
+            "status": "completed",
             "scamDetected": scam_detected,
             "totalMessagesExchanged": total_messages,
             "extractedIntelligence": {
@@ -49,7 +51,12 @@ class GUVICallback:
                 "upiIds": intelligence.get("upi_ids", []),
                 "phishingLinks": intelligence.get("phishing_links", []),
                 "phoneNumbers": intelligence.get("phone_numbers", []),
+                "emailAddresses": intelligence.get("email_addresses", []),
                 "suspiciousKeywords": intelligence.get("suspicious_keywords", [])
+            },
+            "engagementMetrics": engagement_metrics or {
+                "totalMessagesExchanged": total_messages,
+                "engagementDurationSeconds": 0
             },
             "agentNotes": agent_notes
         }

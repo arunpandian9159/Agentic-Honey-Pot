@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Session settings
     SESSION_TIMEOUT_MINUTES: int = 30
-    MAX_MESSAGES_PER_SESSION: int = 12
+    MAX_MESSAGES_PER_SESSION: int = 18
     INTELLIGENCE_SCORE_THRESHOLD: float = 6.0
 
     # LLM settings

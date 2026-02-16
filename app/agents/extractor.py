@@ -48,6 +48,7 @@ Extract these items if present:
   "upi_ids": ["phone@upi, name@bank format UPI IDs"],
   "phishing_links": ["http:// or https:// URLs"],
   "phone_numbers": ["+91XXXXXXXXXX or 10-digit numbers"],
+  "email_addresses": ["user@domain.com format emails"],
   "suspicious_keywords": ["urgent", "verify", "blocked", "prize", etc.]
 }}
 
@@ -92,7 +93,7 @@ Examples:
             Enhanced extraction result
         """
         # Ensure all keys exist
-        for key in ["bank_accounts", "upi_ids", "phishing_links", "phone_numbers", "suspicious_keywords"]:
+        for key in ["bank_accounts", "upi_ids", "phishing_links", "phone_numbers", "email_addresses", "suspicious_keywords"]:
             if key not in llm_result:
                 llm_result[key] = []
         
@@ -106,11 +107,16 @@ Examples:
         ]
         llm_result["phone_numbers"].extend(clean_phones)
         
+        # Email address pattern
+        email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        emails = re.findall(email_pattern, message)
+        llm_result["email_addresses"].extend(emails)
+
         # UPI ID pattern
         upi_pattern = r'[a-zA-Z0-9\.\-\_]+@[a-zA-Z]+'
         upis = re.findall(upi_pattern, message)
         # Filter out email-like patterns (those with common email domains)
-        email_domains = ["gmail", "yahoo", "hotmail", "outlook", "email", "mail"]
+        email_domains = ["gmail", "yahoo", "hotmail", "outlook", "email", "mail", "com", "org", "net", "in", "co"]
         upis = [u for u in upis if not any(d in u.lower() for d in email_domains)]
         llm_result["upi_ids"].extend(upis)
         
@@ -153,6 +159,7 @@ Examples:
             "upi_ids": [],
             "phishing_links": [],
             "phone_numbers": [],
+            "email_addresses": [],
             "suspicious_keywords": []
         }
         
@@ -218,7 +225,7 @@ Examples:
             Merged intelligence dictionary
         """
         merged = {}
-        for key in ["bank_accounts", "upi_ids", "phishing_links", "phone_numbers", "suspicious_keywords"]:
+        for key in ["bank_accounts", "upi_ids", "phishing_links", "phone_numbers", "email_addresses", "suspicious_keywords"]:
             existing_vals = existing.get(key, [])
             new_vals = new.get(key, [])
             merged[key] = list(set(existing_vals + new_vals))

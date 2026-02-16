@@ -3,7 +3,7 @@ Request and Response validators for AI Honeypot API.
 Pydantic models for API data validation.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
@@ -14,7 +14,7 @@ class Message(BaseModel):
     
     sender: str = Field(..., description="Message sender: 'scammer' or 'user'")
     text: str = Field(..., description="Message text content")
-    timestamp: int = Field(..., description="Unix timestamp in milliseconds")
+    timestamp: Union[str, int] = Field(..., description="Timestamp (ISO 8601 string or Unix ms)")
 
 
 class Metadata(BaseModel):
@@ -30,11 +30,10 @@ class ChatRequest(BaseModel):
     """Request body for /api/chat endpoint."""
     model_config = ConfigDict(populate_by_name=True)
     
-    sessionId: str = Field(..., alias="session_id", description="Unique session identifier")
+    sessionId: str = Field(..., description="Unique session identifier")
     message: Message = Field(..., description="Current message")
     conversationHistory: List[Message] = Field(
         default=[], 
-        alias="conversation_history",
         description="Previous messages in conversation"
     )
     metadata: Optional[Metadata] = Field(

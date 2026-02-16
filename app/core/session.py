@@ -33,6 +33,7 @@ class SessionManager:
                 "upi_ids": [],
                 "phishing_links": [],
                 "phone_numbers": [],
+                "email_addresses": [],
                 "suspicious_keywords": []
             },
             "strategy_state": {
@@ -41,6 +42,7 @@ class SessionManager:
             },
             "message_count": 0,
             "callback_sent": False,
+            "session_start_time": datetime.now(),
             "created_at": datetime.now(),
             "last_activity": datetime.now()
         }
@@ -90,6 +92,15 @@ class SessionManager:
             del self.sessions[sid]
             logger.info(f"Cleaned up expired session: {sid}")
     
+    def get_engagement_metrics(self, session: Dict) -> Dict:
+        """Calculate engagement metrics for scoring."""
+        start = session.get("session_start_time", session.get("created_at", datetime.now()))
+        duration = (datetime.now() - start).total_seconds()
+        return {
+            "totalMessagesExchanged": session.get("message_count", 0),
+            "engagementDurationSeconds": round(duration, 2)
+        }
+
     @property
     def active_session_count(self) -> int:
         """Get the count of active sessions."""
