@@ -121,71 +121,18 @@ class OptimizedAgent:
         else:
             persona_prompt = self.persona_manager.get_persona_prompt(persona_name)
 
-        # Build conversation context (last 3 messages only to save tokens)
-        history = session.get("conversation_history", [])[-3:]
-        history_text = _format_history(history) if history else "[First message]"
-
         # Determine stage from message count
         msg_count = session.get("message_count", 0)
         stage_tactic = get_stage_guidance(msg_count)
         context_hint = get_concise_context(session, msg_count)
 
-        # Combined prompt - detection + extraction + response
-        # Scammer psychology profiling (zero-cost, rule-based)
-        profiler_output = self.scammer_profiler.analyze(
-            session.get("conversation_history", [])
-        )
-        psychology_hint = self.scammer_profiler.get_prompt_modifier(profiler_output)
-
-        # Proactive intel extraction hint
-        extraction_hint = get_extraction_prompt_hint(session, profiler_output)
-
-        prompt = f"""Analyze and respond. Output ONLY valid JSON.
-
-MSG: "{scammer_message}"
-HISTORY: {history_text}
-PERSONA: {persona_prompt[:300]}
-TACTIC: {stage_tactic}
-{context_hint}
-{psychology_hint}
-{extraction_hint}
-
-JSON output:
-{{"is_scam":true/false,"confidence":0.0-1.0,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"bank_accounts":[],"upi_ids":[],"phone_numbers":[],"phishing_links":[],"email_addresses":[],"suspicious_keywords":[]}},"response":"victim reply 1-3 sentences"}}
-
-RED FLAG INDICATORS (flag ALL that apply):
-- Urgency/deadline threats ("immediately", "within 2 hours", "last chance")
-- Authority impersonation ("I'm from SBI/RBI/police/government")
-- Payment/fee demands ("send Rs", "processing fee", "registration fee")
-- OTP/KYC/CVV/PIN requests
-- Unsolicited prizes, jobs, cashback, refunds
-- Suspicious links or remote-access requests (AnyDesk, TeamViewer)
-- Legal/arrest threats ("police complaint", "warrant", "legal action")
-- Credential harvesting (passwords, card numbers)
-
-EXTRACT ALL intelligence found:
-- UPI IDs: name@bankcode (e.g. fraud@ybl, scam@paytm)
-- Phones: 10 digits starting 6-9, or +91-XXXXXXXXXX, or with spaces/dashes
-- Links: any http/https URL
-- Bank accounts: 9-18 digit numbers
-- IFSC codes: 4 letters + 0 + 6 alphanumeric
-- Emails: user@domain.com
-- Keywords: urgency, threats, payment, verify, blocked, prize, otp, kyc, etc.
-
-PROBING — weave these into the response to extract intel:
-- Ask scammer to repeat/confirm numbers ("Sorry, what was that number again?")
-- Request branch/employee ID ("Which branch are you calling from?")
-- Ask for callback number ("Can I call you back?")
-- Request payment details ("Where should I send the money exactly?")
-- Feign technical issues ("The link isn't opening, can you resend?")
-- Ask for verification ("How do I know this is really from the bank?")
-
-RESPONSE RULES:
-- Sound like a REAL person, not an AI
-- Use persona-appropriate language and imperfections
-- Vary response style from previous messages
-- Include at least ONE probing question to extract details
-- Keep scammer engaged while never sharing real sensitive info"""
+        # Ultra-compact prompt — detection + extraction + response in minimal tokens
+        prompt = f"""JSON only. Scam honeypot: detect, extract intel, reply in-character.
+        MSG:"{scammer_message}"
+        ROLE:{persona_prompt[:150]}
+        STAGE:{stage_tactic}
+        {context_hint}
+        {{"is_scam":bool,"confidence":0-1,"scam_type":"bank_fraud|upi_fraud|phishing|job_scam|lottery|investment|tech_support|other","intel":{{"upi_ids":[],"phone_numbers":[],"phishing_links":[],"bank_accounts":[],"email_addresses":[],"suspicious_keywords":[]}},"response":"1-2 sentence victim reply, probe for their details"}}"""
 
         try:
             response = await self.llm.generate_json(prompt=prompt, max_tokens=settings.MAX_TOKENS_JSON)
