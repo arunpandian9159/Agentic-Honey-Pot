@@ -41,6 +41,7 @@ SCAM_KEYWORDS = [
     "processing", "registration", "investigation", "legal action",
     "police", "arrest", "warrant", "deadline", "expire", "deactivate",
     "compromise", "unauthorized", "suspicious", "immediately",
+    "anydesk", "teamviewer", "rustdesk", "remote access", "app", "download"
 ]
 
 # Scam type detection keywords (expanded with India-specific terms)
@@ -195,8 +196,8 @@ class OptimizedAgent:
                     parsed = json.loads(stripped)
                     if isinstance(parsed, dict):
                         result["response"] = parsed.get("response", parsed.get("reply", str(parsed)))
-                except (json.JSONDecodeError, ValueError):
-                    pass
+                except (json.JSONDecodeError, ValueError) as json_err:
+                    logger.debug(f"Response not JSON formatted: {json_err}")
         elif isinstance(resp, dict):
             result["response"] = resp.get("response", resp.get("reply", str(resp)))
 
@@ -316,6 +317,13 @@ def _fallback_response(message: str, persona: str, msg_count: int) -> Dict:
         if digits_only != cleaned:
             phones.append(digits_only)
     phones = list(set(phones))
+    
+    # Tech support IDs fallback (9 or 10 digits)
+    support_ids = re.findall(r'(?<!\d)(?:[1-9]\d{2}[\s\-]?\d{3}[\s\-]?\d{3,4})(?!\d)', message)
+    for sid in support_ids:
+        cleaned = re.sub(r'[\s\-]', '', sid)
+        if cleaned not in phones:
+            phones.append(cleaned)
 
     # Bank accounts: 9 to 18 digits
     bank_accounts = re.findall(r'\b\d{9,18}\b', message)

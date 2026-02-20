@@ -149,5 +149,5 @@ def _enable_windows_ansi():
             import ctypes
             kernel32 = ctypes.windll.kernel32
             kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Failed to log message: {e}")

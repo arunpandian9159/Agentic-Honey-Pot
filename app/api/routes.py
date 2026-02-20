@@ -244,8 +244,8 @@ async def chat_endpoint(
                         reply = parsed.get("response", parsed.get("reply", str(parsed)))
                     else:
                         reply = str(parsed)
-                except (json.JSONDecodeError, ValueError):
-                    pass
+                except (json.JSONDecodeError, ValueError) as json_err:
+                    logger.debug(f"Response not JSON formatted: {json_err}")
         if not isinstance(reply, str):
             reply = str(reply)
 

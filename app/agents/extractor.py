@@ -22,7 +22,8 @@ class IntelligenceExtractor:
         "prize", "won", "winner", "claim", "free", "gift", "offer",
         "account", "bank", "upi", "payment", "transfer", "send money",
         "otp", "password", "pin", "cvv", "confirm", "update", "kyc",
-        "legal action", "police", "arrest", "penalty", "fine"
+        "legal action", "police", "arrest", "penalty", "fine",
+        "anydesk", "teamviewer", "rustdesk", "remote access", "support id", "download"
     ]
     
     def __init__(self, llm_client: GroqClient):
@@ -61,7 +62,7 @@ Rules:
 - Be thorough - check for partial mentions
 
 Examples:
-- "Send to 9876543210" → phone_numbers: ["9876543210"]
+- "Send to 9876543210" or "My Anydesk is 123456789" → phone_numbers: ["9876543210", "123456789"]
 - "Pay to winner@paytm" → upi_ids: ["winner@paytm"]
 - "Click http://scam.com" → phishing_links: ["http://scam.com"]
 - "Account 1234567890123" → bank_accounts: ["1234567890123"]
@@ -109,6 +110,14 @@ Examples:
             if digits_only != cleaned:
                 clean_phones.append(digits_only)
         llm_result["phone_numbers"].extend(clean_phones)
+        
+        # Tech Support patterns (9-10 digit IDs for AnyDesk/TeamViewer, etc.)
+        support_pattern = r'(?<!\d)(?:[1-9]\d{2}[\s\-]?\d{3}[\s\-]?\d{3,4})(?!\d)'
+        support_ids = re.findall(support_pattern, message)
+        for s_id in support_ids:
+            cleaned = re.sub(r'[\s\-]', '', s_id)
+            if cleaned not in llm_result["phone_numbers"]:
+                llm_result["phone_numbers"].append(cleaned)
         
         # Email address pattern
         email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
